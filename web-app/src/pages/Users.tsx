@@ -329,7 +329,7 @@ const UserCard = memo(({
 UserCard.displayName = 'UserCard';
 
 export function Users() {
-  const { permissions, signOut } = useAuth();
+  const { permissions } = useAuth();
   const { setActionButton } = usePage();
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserWithRole[]>([]);
@@ -465,9 +465,6 @@ export function Users() {
       if (result.error) {
         setError(result.error.message);
         setCreating(false);
-        if (result.error.message === 'Session expired or invalid. Please sign in again.') {
-          await signOut();
-        }
         return;
       }
 

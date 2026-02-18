@@ -46,27 +46,11 @@ serve(async (req) => {
       );
     }
 
-    // Create client with Authorization header for JWT verification
+    // Create clients: anon for JWT verification, admin for DB and auth
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Verify the JWT token using getUser (more tolerant than getClaims)
-    const { data: callerUser, error: callerUserError } = await supabase.auth.getUser(token);
-
-    if (callerUserError || !callerUser?.user) {
-      return new Response(
-        JSON.stringify({ 
-          error: callerUserError?.message ?? 'Invalid JWT',
-          details: 'Invalid or expired JWT token. Please refresh your session and try again.'
-        }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const callerUserId = callerUser.user.id;
-
-    // Get full user details using Admin API (since we have service role key)
     const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
@@ -74,21 +58,40 @@ serve(async (req) => {
       },
     });
 
+    // Verify JWT: try getClaims first (recommended for asymmetric JWT signing), then getUser
+    let callerUserId: string;
+
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (!claimsError && claimsData?.claims?.sub) {
+      callerUserId = claimsData.claims.sub as string;
+    } else {
+      const { data: callerUser, error: callerUserError } = await supabase.auth.getUser(token);
+      if (callerUserError || !callerUser?.user) {
+        return new Response(
+          JSON.stringify({
+            error: callerUserError?.message ?? claimsError?.message ?? 'Invalid JWT',
+            details: 'Invalid or expired JWT token. Please refresh your session and try again.',
+          }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      callerUserId = callerUser.user.id;
+    }
+
     const { data: { user: currentUser }, error: adminUserError } = await adminClient.auth.admin.getUserById(callerUserId);
 
     if (adminUserError || !currentUser) {
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: adminUserError?.message ?? 'User not found',
-          details: 'Could not retrieve user information from token.'
+          details: 'Could not retrieve user information from token.',
         }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Verify the user is an admin or super_admin
-    // Fetch user and role separately to avoid RLS issues with joins
-    const { data: callerUserData, error: callerRoleError } = await supabase
+    // Verify the user is an admin or super_admin (use adminClient to avoid RLS)
+    const { data: callerUserData, error: callerRoleError } = await adminClient
       .from('users')
       .select('role_id')
       .eq('id', currentUser.id)
@@ -101,8 +104,7 @@ serve(async (req) => {
       );
     }
 
-    // Fetch role separately
-    const { data: callerRoleData, error: callerRoleFetchError } = await supabase
+    const { data: callerRoleData, error: callerRoleFetchError } = await adminClient
       .from('roles')
       .select('name')
       .eq('id', callerUserData.role_id)
@@ -134,7 +136,7 @@ serve(async (req) => {
     }
 
     // Get the role ID
-    const { data: targetRoleData, error: targetRoleError } = await supabase
+    const { data: targetRoleData, error: targetRoleError } = await adminClient
       .from('roles')
       .select('id')
       .eq('name', role)

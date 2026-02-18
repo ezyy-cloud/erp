@@ -151,8 +151,8 @@ export async function createUser(params: CreateUserParams): Promise<CreateUserRe
       };
     }
 
-    let message =
-      (typeof data.error === 'string' ? data.error : data.error?.message) ?? null;
+    const serverError = (typeof data.error === 'string' ? data.error : data.error?.message) ?? data.details ?? null;
+    let message = serverError;
     if (!message) {
       if (response.status === 404) {
         message = 'Create-user Edge Function not found. Deploy it with: supabase functions deploy create-user';
@@ -161,6 +161,8 @@ export async function createUser(params: CreateUserParams): Promise<CreateUserRe
       } else {
         message = 'User creation failed. Try again or contact your administrator.';
       }
+    } else if (response.status === 401 && !message.toLowerCase().includes('sign in')) {
+      message = `${message} Please sign in again.`;
     }
     throw new Error(message);
   } catch (error) {

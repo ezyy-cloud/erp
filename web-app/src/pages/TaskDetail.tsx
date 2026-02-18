@@ -68,18 +68,23 @@ export function TaskDetail() {
       .then(({ data, error }) => {
         if (error) {
           console.error('Error fetching task:', error);
-          return;
+          setTask(null);
+        } else {
+          setTask(data);
         }
-        setTask(data);
+        setTaskLoading(false);
       });
   }, [id]);
 
   useEffect(() => {
     if (!id) {
       setTaskLoading(false);
+      setTask(null);
       return;
     }
 
+    setTaskLoading(true);
+    setTask(null);
     refetchTask();
 
     if (!isConnected) return;

@@ -115,7 +115,13 @@ export async function createUser(params: CreateUserParams): Promise<CreateUserRe
     }
 
     const refreshed = await supabase.auth.refreshSession(currentSession);
+    if (refreshed.error) {
+      throw new Error('Session expired or invalid. Please sign in again.');
+    }
     const session = refreshed.data.session ?? currentSession;
+    if (!session) {
+      throw new Error('Session expired or invalid. Please sign in again.');
+    }
 
     const response = await fetch(
       `${supabaseUrl}/functions/v1/create-user`,

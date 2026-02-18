@@ -192,8 +192,8 @@ const UserCard = memo(({
               <div className="flex items-center gap-2 shrink-0">
                 <span className={`px-2 py-1 text-xs rounded flex items-center gap-1 ${
                   user.is_active
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                    ? 'bg-muted text-foreground'
+                    : 'bg-muted text-muted-foreground'
                 }`}>
                   <TrendingUp className="h-3 w-3" />
                   {user.is_active ? 'Active' : 'Inactive'}
@@ -223,25 +223,25 @@ const UserCard = memo(({
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Completed</span>
-                    <span className="text-sm font-semibold text-green-600 dark:text-green-400">
+                    <span className="text-sm font-semibold text-foreground">
                       {taskCounts.total_completed}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Pending</span>
-                    <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">
+                    <span className="text-sm font-semibold text-muted-foreground">
                       {taskCounts.total_pending}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Work-In-Progress</span>
-                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                    <span className="text-sm font-semibold text-muted-foreground">
                       {taskCounts.total_in_progress}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Pending Review</span>
-                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                    <span className="text-sm font-semibold text-muted-foreground">
                       {taskCounts.total_pending_review}
                     </span>
                   </div>
@@ -261,7 +261,7 @@ const UserCard = memo(({
                       {/* Completed segment (green) */}
                       {taskCounts.total_completed > 0 && (
                         <div
-                          className="bg-green-600 dark:bg-green-500 transition-all"
+                          className="bg-primary transition-all"
                           style={{ 
                             width: `${(taskCounts.total_completed / taskCounts.total_assigned) * 100}%` 
                           }}
@@ -271,7 +271,7 @@ const UserCard = memo(({
                       {/* Pending segment (yellow) */}
                       {taskCounts.total_pending > 0 && (
                         <div
-                          className="bg-yellow-600 dark:bg-yellow-500 transition-all"
+                          className="bg-muted-foreground/50 transition-all"
                           style={{ 
                             width: `${(taskCounts.total_pending / taskCounts.total_assigned) * 100}%` 
                           }}
@@ -281,7 +281,7 @@ const UserCard = memo(({
                       {/* Work-In-Progress segment (blue) */}
                       {taskCounts.total_in_progress > 0 && (
                         <div
-                          className="bg-blue-600 dark:bg-blue-500 transition-all"
+                          className="bg-muted-foreground/30 transition-all"
                           style={{ 
                             width: `${(taskCounts.total_in_progress / taskCounts.total_assigned) * 100}%` 
                           }}
@@ -694,37 +694,37 @@ export function Users() {
               {resetPasswordResult.password ? (
                 <p className="font-mono text-sm bg-muted p-2 rounded">{resetPasswordResult.password}</p>
               ) : (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
-                  <p className="text-xs text-red-800 dark:text-red-200 font-medium">
+                <div className="bg-muted border border-border rounded-md p-3">
+                  <p className="text-xs text-foreground font-medium">
                     ⚠️ Password not generated. Check console for details.
                   </p>
                 </div>
               )}
             </div>
             {resetPasswordResult.error && (
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3">
-                <p className="text-xs text-yellow-800 dark:text-yellow-200 font-medium mb-1">
+              <div className="bg-muted border border-border rounded-md p-3">
+                <p className="text-xs text-foreground font-medium mb-1">
                   ⚠️ Edge Function Issue
                 </p>
-                <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                <p className="text-xs text-muted-foreground">
                   {resetPasswordResult.error.message}
                 </p>
                 {resetPasswordResult.error.message.includes('not reachable') && (
-                  <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     To set this password manually, go to Supabase Dashboard → Authentication → Users → 
                     Find the user → Click "Reset Password" or update manually.
                   </p>
                 )}
                 {resetPasswordResult.error.message.includes('Edge Function error') && (
-                  <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     Check the browser console for more details. The password above was generated but may not be set in auth.users.
                   </p>
                 )}
               </div>
             )}
             {!resetPasswordResult.error && (
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-3">
-                <p className="text-xs text-green-800 dark:text-green-200 font-medium">
+<div className="bg-muted border border-border rounded-md p-3">
+                  <p className="text-xs text-foreground font-medium">
                   ✓ Password reset successfully via Edge Function
                 </p>
               </div>

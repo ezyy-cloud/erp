@@ -6,15 +6,15 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { validateReportData, calculateSummaryMetrics, type ValidatedReportData } from './reportSchemas';
 
-// Color system
+// Color system (black and white theme)
 const COLORS = {
-  primary: rgb(0.2, 0.4, 0.8), // Blue
+  primary: rgb(0.1, 0.1, 0.1),
   text: rgb(0, 0, 0),
   textSecondary: rgb(0.3, 0.3, 0.3),
   textMuted: rgb(0.5, 0.5, 0.5),
-  success: rgb(0.2, 0.6, 0.2), // Green
-  warning: rgb(0.9, 0.6, 0.1), // Amber
-  danger: rgb(0.8, 0.2, 0.2), // Red
+  success: rgb(0.3, 0.3, 0.3),
+  warning: rgb(0.4, 0.4, 0.4),
+  danger: rgb(0.25, 0.25, 0.25),
   border: rgb(0.8, 0.8, 0.8),
   background: rgb(0.95, 0.95, 0.95),
 };

@@ -315,18 +315,18 @@ export function Profile() {
 
       {/* Success/Error Messages */}
       {saveSuccess && (
-        <div className="flex items-center gap-2 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
-          <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-          <p className="text-sm text-green-800 dark:text-green-200">
+        <div className="flex items-center gap-2 p-4 bg-muted border border-border rounded-md">
+          <CheckCircle2 className="h-5 w-5 text-foreground" />
+          <p className="text-sm text-foreground">
             Profile updated successfully
           </p>
         </div>
       )}
 
       {error && (
-        <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
-          <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-          <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+        <div className="flex items-center gap-2 p-4 bg-muted border border-border rounded-md">
+          <AlertCircle className="h-5 w-5 text-foreground" />
+          <p className="text-sm text-foreground">{error}</p>
         </div>
       )}
 

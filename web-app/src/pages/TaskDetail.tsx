@@ -703,18 +703,15 @@ export function TaskDetail() {
         const StatusIcon = statusDisplay.icon;
         return (
           <Card className={`border-2 ${
-            taskIsClosed ? 'border-gray-400 bg-gray-50 dark:bg-gray-900' :
-            taskIsDone ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950' :
-            taskIsWorkInProgress ? 'border-blue-400 bg-blue-50 dark:bg-blue-950' :
-            'border-gray-300 bg-gray-50 dark:bg-gray-900'
+            taskIsClosed ? 'border-border bg-muted' :
+            taskIsDone ? 'border-border bg-muted' :
+            taskIsWorkInProgress ? 'border-border bg-muted' :
+            'border-border bg-muted'
           }`}>
           <CardContent className="pt-6">
               <div className="flex items-start gap-3">
                 <StatusIcon className={`h-6 w-6 mt-0.5 ${
-                  taskIsClosed ? 'text-gray-600 dark:text-gray-400' :
-                  taskIsDone ? 'text-yellow-600 dark:text-yellow-400' :
-                  taskIsWorkInProgress ? 'text-blue-600 dark:text-blue-400' :
-                  'text-gray-600 dark:text-gray-400'
+                  'text-foreground'
                 }`} />
                 <div className="flex-1">
                   <p className="font-semibold text-lg">
@@ -742,12 +739,12 @@ export function TaskDetail() {
 
       {/* Task Under Edit Review Banner */}
       {pendingEditRequest && !permissions.canApproveTaskEdits && (
-        <Card className="border-2 border-yellow-500 dark:border-yellow-700">
+        <Card className="border-2 border-border">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+              <Clock className="h-5 w-5 text-foreground" />
               <div>
-                <p className="font-medium text-yellow-900 dark:text-yellow-100">
+                <p className="font-medium text-foreground">
                   Task Under Edit Review
                 </p>
                 <p className="text-sm text-muted-foreground">
@@ -1193,7 +1190,7 @@ export function TaskDetail() {
             <CardContent className="space-y-4 p-4 sm:p-6 pt-0">
               {/* Review Information Display */}
               {taskIsDone && (
-                <div className="space-y-2 text-sm p-3 bg-yellow-50 dark:bg-yellow-950 rounded-md">
+                <div className="space-y-2 text-sm p-3 bg-muted rounded-md">
                   {reviewRequestedBy && (
                     <div>
                       <span className="text-muted-foreground">Review requested by: </span>

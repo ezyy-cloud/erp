@@ -238,20 +238,20 @@ export function Dashboard() {
             </Card>
           </Link>
           <Link to="/tasks?status=due_today" className="block">
-            <Card className={`hover:shadow-md transition-shadow cursor-pointer ${taskMetrics.dueToday > 0 ? 'border-orange-500/50 dark:border-orange-400/50 bg-orange-50/50 dark:bg-orange-950/20' : ''}`}>
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="pt-3 pb-3 sm:pt-4 sm:pb-4">
                 <div className="text-xs text-muted-foreground mb-1">Due Today</div>
-                <div className={`text-lg sm:text-xl md:text-2xl font-bold ${taskMetrics.dueToday > 0 ? 'text-orange-700 dark:text-orange-400' : ''}`}>
+                <div className="text-lg sm:text-xl md:text-2xl font-bold">
                   {taskMetrics.dueToday}
                 </div>
               </CardContent>
             </Card>
           </Link>
           <Link to="/tasks?status=overdue" className="block">
-            <Card className={`hover:shadow-md transition-shadow cursor-pointer ${taskMetrics.overdue > 0 ? 'border-red-500/50 dark:border-red-400/50 bg-red-50/50 dark:bg-red-950/20' : ''}`}>
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="pt-3 pb-3 sm:pt-4 sm:pb-4">
                 <div className="text-xs text-muted-foreground mb-1">Overdue</div>
-                <div className={`text-lg sm:text-xl md:text-2xl font-bold ${taskMetrics.overdue > 0 ? 'text-red-700 dark:text-red-400' : ''}`}>
+                <div className="text-lg sm:text-xl md:text-2xl font-bold">
                   {taskMetrics.overdue}
                 </div>
               </CardContent>
@@ -301,7 +301,6 @@ export function Dashboard() {
                 }).map((summary) => {
                   const statusDisplay = getTaskStatusDisplay(summary.status);
                   const StatusIcon = statusDisplay.icon;
-                  const isDoneStatus = summary.status === 'Done' || summary.status === 'done';
                   const hasUrgency = summary.overdue_count > 0 || summary.due_today_count > 0;
 
                   // Map status to URL parameter - use canonical lifecycle if available
@@ -334,9 +333,7 @@ export function Dashboard() {
                           <div className="flex items-center gap-2 lg:w-full">
                             <StatusIcon
                               className={`h-3.5 w-3.5 sm:h-4 sm:w-4 lg:h-5 lg:w-5 shrink-0 ${
-                                isDoneStatus
-                                  ? 'text-green-600 dark:text-green-400'
-                                  : statusDisplay.color
+                                statusDisplay.color
                               }`}
                             />
                             <span className="text-xs sm:text-sm lg:text-sm font-semibold capitalize truncate lg:truncate-none">
@@ -371,7 +368,7 @@ export function Dashboard() {
                                 </span>
                                 <span className={`font-bold text-xs lg:text-sm tabular-nums ${
                                   openTasksCount > 0 
-                                    ? 'text-green-700 dark:text-green-400' 
+                                    ? 'text-foreground' 
                                     : 'text-muted-foreground opacity-60'
                                 }`}>
                                   {openTasksCount > 0 
@@ -417,7 +414,7 @@ export function Dashboard() {
                                 </span>
                                 <span className={`font-bold text-xs lg:text-sm tabular-nums ${
                                   summary.overdue_count > 0 
-                                    ? 'text-red-700 dark:text-red-400' 
+                                    ? 'text-foreground' 
                                     : 'text-muted-foreground opacity-60'
                                 }`}>
                                   {summary.overdue_count}
@@ -429,7 +426,7 @@ export function Dashboard() {
                                 </span>
                                 <span className={`font-bold text-xs lg:text-sm tabular-nums ${
                                   summary.due_today_count > 0 
-                                    ? 'text-orange-700 dark:text-orange-400' 
+                                    ? 'text-foreground' 
                                     : 'text-muted-foreground opacity-60'
                                 }`}>
                                   {summary.due_today_count}
@@ -494,7 +491,7 @@ export function Dashboard() {
                               </span>
                               <span className={`font-bold text-xs lg:text-sm tabular-nums ${
                                 taskMetrics.total > 0
-                                  ? 'text-green-700 dark:text-green-400'
+                                  ? 'text-foreground'
                                   : 'text-muted-foreground opacity-60'
                               }`}>
                                 {taskMetrics.total > 0
@@ -581,7 +578,7 @@ export function Dashboard() {
                       {/* In Progress segment */}
                       {inProgressPercent > 0 && (
                         <div
-                          className="bg-blue-600 transition-all duration-300 flex items-center justify-center"
+                          className="bg-primary transition-all duration-300 flex items-center justify-center"
                           style={{ width: `${inProgressPercent}%` }}
                           title={`In Progress: ${inProgressCount} (${Math.round(inProgressPercent)}%)`}
                         >
@@ -595,7 +592,7 @@ export function Dashboard() {
                       {/* Done segment */}
                       {donePercent > 0 && (
                         <div
-                          className="bg-green-600 transition-all duration-300 flex items-center justify-center"
+                          className="bg-muted-foreground/70 transition-all duration-300 flex items-center justify-center"
                           style={{ width: `${donePercent}%` }}
                           title={`Done: ${doneCount} (${Math.round(donePercent)}%)`}
                         >
@@ -637,7 +634,6 @@ export function Dashboard() {
                   .map((project) => {
                     const statusDisplay = getProjectStatusDisplay(project.project_status);
                     const StatusIcon = statusDisplay.icon;
-                    const hasOverdue = project.overdue_tasks > 0;
 
                     return (
                       <Link
@@ -647,9 +643,7 @@ export function Dashboard() {
                       >
                         <div
                           className={`p-2.5 sm:p-3 md:p-4 lg:p-4 rounded-md border hover:bg-accent/50 dark:hover:bg-accent/20 transition-colors ${
-                            hasOverdue 
-                              ? 'border-orange-500/50 dark:border-orange-400/50 bg-orange-50/30 dark:bg-orange-950/20' 
-                              : 'border-border'
+                            'border-border'
                           }`}
                         >
                           {/* Header: Project name and status label */}
@@ -673,11 +667,11 @@ export function Dashboard() {
                             </div>
                             <div className="flex items-center justify-between">
                               <span className="text-muted-foreground text-xs">Work-In-Progress</span>
-                              <span className="font-medium text-xs sm:text-sm tabular-nums text-blue-600 dark:text-blue-400">
+                              <span className="font-medium text-xs sm:text-sm tabular-nums">
                                 {project.work_in_progress_tasks ?? 0}
                               </span>
                             </div>
-                            <div className={`flex items-center justify-between ${hasOverdue ? 'text-red-700 dark:text-red-400' : ''}`}>
+                            <div className="flex items-center justify-between">
                               <span className="text-muted-foreground text-xs">Overdue</span>
                               <span className="font-semibold text-xs sm:text-sm tabular-nums">{project.overdue_tasks}</span>
                             </div>
@@ -705,7 +699,7 @@ export function Dashboard() {
                                   {/* Work-In-Progress segment */}
                                   {workInProgressPercent > 0 && (
                                     <div
-                                      className="bg-blue-600 transition-all duration-300"
+                                      className="bg-primary transition-all duration-300"
                                       style={{ width: `${workInProgressPercent}%` }}
                                       title={`Work-In-Progress: ${workInProgressCount} (${Math.round(workInProgressPercent)}%)`}
                                     />
@@ -713,7 +707,7 @@ export function Dashboard() {
                                   {/* Overdue segment */}
                                   {overduePercent > 0 && (
                                     <div
-                                      className="bg-red-600 transition-all duration-300"
+                                      className="bg-muted-foreground/80 transition-all duration-300"
                                       style={{ width: `${overduePercent}%` }}
                                       title={`Overdue: ${overdueCount} (${Math.round(overduePercent)}%)`}
                                     />
@@ -792,17 +786,11 @@ export function Dashboard() {
             <CardContent className="px-3 sm:px-4 md:px-6 pb-4 md:pb-6 w-full overflow-x-hidden">
               {/* Mobile: Card-based layout, Desktop: Table */}
               <div className="lg:hidden space-y-3">
-                {stats.userWorkload.map((user) => {
-                  const hasOverdue = user.overdue_tasks > 0;
-                  return (
+                {stats.userWorkload.map((user) => (
                     <div
                       key={user.user_id}
                       onClick={() => navigate(`/users/${user.user_id}/performance`)}
-                      className={`p-4 rounded-lg border cursor-pointer transition-colors ${
-                        hasOverdue 
-                          ? 'bg-red-50/30 dark:bg-red-950/20 border-red-200 dark:border-red-800' 
-                          : 'bg-card border-border hover:bg-accent/50'
-                      }`}
+                      className="p-4 rounded-lg border cursor-pointer transition-colors bg-card border-border hover:bg-accent/50"
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex-1 min-w-0">
@@ -819,7 +807,7 @@ export function Dashboard() {
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">Overdue</span>
-                          <span className={`font-semibold ${hasOverdue ? 'text-red-700 dark:text-red-400' : ''}`}>
+                          <span className="font-semibold">
                             {user.overdue_tasks}
                           </span>
                         </div>
@@ -829,8 +817,7 @@ export function Dashboard() {
                         </div>
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
               </div>
               {/* Desktop: Table layout */}
               <div className="hidden lg:block overflow-x-auto -mx-4 md:-mx-6 px-4 md:px-6">
@@ -845,15 +832,11 @@ export function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {stats.userWorkload.map((user) => {
-                      const hasOverdue = user.overdue_tasks > 0;
-                      return (
+                    {stats.userWorkload.map((user) => (
                         <tr
                           key={user.user_id}
                           onClick={() => navigate(`/users/${user.user_id}/performance`)}
-                          className={`border-b border-border hover:bg-accent/50 dark:hover:bg-accent/20 transition-colors cursor-pointer ${
-                            hasOverdue ? 'bg-red-50/30 dark:bg-red-950/20' : ''
-                          }`}
+                          className="border-b border-border hover:bg-accent/50 dark:hover:bg-accent/20 transition-colors cursor-pointer"
                         >
                           <td className="p-2 sm:p-2.5 md:p-3 font-medium text-xs sm:text-sm">
                             <div className="flex flex-col sm:hidden">
@@ -868,13 +851,12 @@ export function Dashboard() {
                             {user.user_role.replace('_', ' ')}
                           </td>
                           <td className="p-2 sm:p-2.5 md:p-3 text-right font-medium text-xs sm:text-sm">{user.assigned_tasks}</td>
-                          <td className={`p-2 sm:p-2.5 md:p-3 text-right font-semibold text-xs sm:text-sm ${hasOverdue ? 'text-red-700 dark:text-red-400' : ''}`}>
+                          <td className="p-2 sm:p-2.5 md:p-3 text-right font-semibold text-xs sm:text-sm">
                             {user.overdue_tasks}
                           </td>
                           <td className="p-2 sm:p-2.5 md:p-3 text-right text-xs sm:text-sm">{user.tasks_waiting_review}</td>
                         </tr>
-                      );
-                    })}
+                      ))}
                   </tbody>
                 </table>
               </div>

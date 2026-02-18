@@ -22,7 +22,7 @@ export function highlightText(text: string | null | undefined, searchQuery: stri
           // Reset regex lastIndex for next test
           regex.lastIndex = 0;
           return (
-            <mark key={index} className="bg-yellow-200 dark:bg-yellow-900 font-semibold">
+            <mark key={index} className="bg-muted font-semibold">
               {part}
             </mark>
           );

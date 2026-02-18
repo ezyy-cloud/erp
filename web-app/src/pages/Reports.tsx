@@ -353,7 +353,7 @@ export function Reports() {
 
           {/* Success Message */}
           {success && (
-            <div className="flex items-start gap-3 p-4 bg-green-500/10 text-green-700 dark:text-green-400 rounded-lg border border-green-500/20 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-start gap-3 p-4 bg-muted text-foreground rounded-lg border border-border animate-in fade-in slide-in-from-top-2">
               <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
               <p className="text-sm flex-1">{success}</p>
             </div>

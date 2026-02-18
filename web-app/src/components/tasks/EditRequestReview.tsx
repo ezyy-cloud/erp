@@ -96,7 +96,7 @@ export function EditRequestReview({ request, onReviewed }: EditRequestReviewProp
                   <p className="text-muted-foreground text-xs mb-1">Current:</p>
                   <p>{request.task?.title ?? 'N/A'}</p>
                 </div>
-                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm">
+                <div className="p-2 bg-muted rounded text-sm">
                   <p className="text-muted-foreground text-xs mb-1">Proposed:</p>
                   <p>{proposedChanges.title}</p>
                 </div>
@@ -112,7 +112,7 @@ export function EditRequestReview({ request, onReviewed }: EditRequestReviewProp
                   <p className="text-muted-foreground text-xs mb-1">Current:</p>
                   <p>{request.task?.description || '(No description)'}</p>
                 </div>
-                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm min-h-[80px]">
+                <div className="p-2 bg-muted rounded text-sm min-h-[80px]">
                   <p className="text-muted-foreground text-xs mb-1">Proposed:</p>
                   <p>{proposedChanges.description || '(No description)'}</p>
                 </div>
@@ -128,7 +128,7 @@ export function EditRequestReview({ request, onReviewed }: EditRequestReviewProp
                   <p className="text-muted-foreground text-xs mb-1">Current:</p>
                   <p>{request.task?.due_date ? new Date(request.task.due_date).toLocaleString() : '(No due date)'}</p>
                 </div>
-                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm">
+                <div className="p-2 bg-muted rounded text-sm">
                   <p className="text-muted-foreground text-xs mb-1">Proposed:</p>
                   <p>{proposedChanges.due_date ? new Date(proposedChanges.due_date).toLocaleString() : '(No due date)'}</p>
                 </div>
@@ -144,7 +144,7 @@ export function EditRequestReview({ request, onReviewed }: EditRequestReviewProp
                   <p className="text-muted-foreground text-xs mb-1">Current:</p>
                   <p className="capitalize">{request.task?.priority ?? 'N/A'}</p>
                 </div>
-                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm">
+                <div className="p-2 bg-muted rounded text-sm">
                   <p className="text-muted-foreground text-xs mb-1">Proposed:</p>
                   <p className="capitalize">{proposedChanges.priority}</p>
                 </div>
@@ -160,7 +160,7 @@ export function EditRequestReview({ request, onReviewed }: EditRequestReviewProp
                   <p className="text-muted-foreground text-xs mb-1">Current:</p>
                   <p className="text-xs">(Check task for current assignees)</p>
                 </div>
-                <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm">
+                <div className="p-2 bg-muted rounded text-sm">
                   <p className="text-muted-foreground text-xs mb-1">Proposed:</p>
                   <p className="text-xs">{proposedChanges.assignees.length} assignee(s)</p>
                 </div>

@@ -29,34 +29,34 @@ export function getPriorityDisplay(priority: string): PriorityDisplay {
     case TaskPriority.URGENT:
       return {
         label: 'Urgent',
-        color: 'text-red-600',
-        bgColor: 'bg-red-50',
-        borderColor: 'border-red-500',
+        color: 'text-foreground',
+        bgColor: 'bg-muted',
+        borderColor: 'border-border',
         icon: AlertCircle,
       };
     case TaskPriority.HIGH:
       return {
         label: 'High',
-        color: 'text-orange-600',
-        bgColor: 'bg-orange-50',
-        borderColor: 'border-orange-500',
+        color: 'text-foreground',
+        bgColor: 'bg-muted',
+        borderColor: 'border-border',
         icon: AlertTriangle,
       };
     case TaskPriority.MEDIUM:
       return {
         label: 'Medium',
-        color: 'text-yellow-600',
-        bgColor: 'bg-yellow-50',
-        borderColor: 'border-yellow-500',
+        color: 'text-muted-foreground',
+        bgColor: 'bg-muted',
+        borderColor: 'border-border',
         icon: Clock,
       };
     case TaskPriority.LOW:
     default:
       return {
         label: 'Low',
-        color: 'text-blue-600',
-        bgColor: 'bg-blue-50',
-        borderColor: 'border-blue-500',
+        color: 'text-muted-foreground',
+        bgColor: 'bg-muted',
+        borderColor: 'border-border',
         icon: Circle,
       };
   }
@@ -98,16 +98,16 @@ export function getTaskStatusDisplay(
     case TaskLifecycleStatus.WORK_IN_PROGRESS:
       return {
         label: 'Work-In-Progress',
-        color: 'text-blue-600',
-        bgColor: 'bg-blue-100',
+        color: 'text-foreground',
+        bgColor: 'bg-muted',
         icon: PlayCircle,
         description: 'Active execution - Work has started',
       };
     case TaskLifecycleStatus.DONE:
       return {
         label: 'Done (Pending Review)',
-        color: 'text-yellow-600',
-        bgColor: 'bg-yellow-100',
+        color: 'text-muted-foreground',
+        bgColor: 'bg-muted',
         icon: FileCheck,
         description: 'Work completed - Awaiting review approval',
       };
@@ -143,16 +143,16 @@ export function getTaskStatusDisplay(
         case TaskStatus.IN_PROGRESS:
           return {
             label: 'In Progress',
-            color: 'text-blue-600',
-            bgColor: 'bg-blue-100',
+            color: 'text-foreground',
+            bgColor: 'bg-muted',
             icon: PlayCircle,
             description: 'Work in progress',
           };
         case TaskStatus.DONE:
           return {
             label: 'Done',
-            color: 'text-green-600',
-            bgColor: 'bg-green-100',
+            color: 'text-muted-foreground',
+            bgColor: 'bg-muted',
             icon: CheckCircle2,
             description: 'Task completed',
           };
@@ -189,36 +189,36 @@ export function getProjectStatusDisplay(status: string): ProjectStatusDisplay {
     case ProjectStatus.ACTIVE:
       return {
         label: 'Active',
-        color: 'text-green-600',
-        bgColor: 'bg-green-100',
+        color: 'text-foreground',
+        bgColor: 'bg-muted',
         icon: Activity,
       };
     case ProjectStatus.CLOSED:
       return {
         label: 'Closed',
-        color: 'text-red-600',
-        bgColor: 'bg-red-100',
+        color: 'text-muted-foreground',
+        bgColor: 'bg-muted',
         icon: Archive,
       };
     case ProjectStatus.COMPLETED:
       return {
         label: 'Completed',
-        color: 'text-blue-600',
-        bgColor: 'bg-blue-100',
+        color: 'text-muted-foreground',
+        bgColor: 'bg-muted',
         icon: CheckCircle2,
       };
     case ProjectStatus.ARCHIVED:
       return {
         label: 'Archived',
-        color: 'text-gray-600',
-        bgColor: 'bg-gray-100',
+        color: 'text-muted-foreground',
+        bgColor: 'bg-muted',
         icon: Archive,
       };
     default:
       return {
         label: status,
-        color: 'text-gray-600',
-        bgColor: 'bg-gray-100',
+        color: 'text-muted-foreground',
+        bgColor: 'bg-muted',
         icon: Circle,
       };
   }
@@ -249,8 +249,8 @@ export function getDueDateDisplay(dueDate: string | null | undefined): DueDateDi
     // Overdue
     return {
       label: `Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? '' : 's'}`,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
+      color: 'text-foreground',
+      bgColor: 'bg-muted',
       icon: CalendarX,
       isOverdue: true,
       isDueSoon: false,
@@ -259,8 +259,8 @@ export function getDueDateDisplay(dueDate: string | null | undefined): DueDateDi
     // Due today
     return {
       label: 'Due today',
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
+      color: 'text-foreground',
+      bgColor: 'bg-muted',
       icon: Calendar,
       isOverdue: false,
       isDueSoon: true,
@@ -269,8 +269,8 @@ export function getDueDateDisplay(dueDate: string | null | undefined): DueDateDi
     // Due soon (within 3 days)
     return {
       label: `Due in ${diffDays} day${diffDays === 1 ? '' : 's'}`,
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-50',
+      color: 'text-muted-foreground',
+      bgColor: 'bg-muted',
       icon: CalendarCheck,
       isOverdue: false,
       isDueSoon: true,
@@ -279,8 +279,8 @@ export function getDueDateDisplay(dueDate: string | null | undefined): DueDateDi
     // Due later
     return {
       label: due.toLocaleDateString(),
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-50',
+      color: 'text-muted-foreground',
+      bgColor: 'bg-muted',
       icon: Calendar,
       isOverdue: false,
       isDueSoon: false,

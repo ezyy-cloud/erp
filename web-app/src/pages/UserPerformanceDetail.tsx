@@ -508,7 +508,7 @@ export function UserPerformanceDetail() {
             <CardTitle className="text-base">Tasks Completed</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+            <div className="text-3xl font-bold text-foreground">
               {taskCounts.total_completed}
             </div>
             <div className="text-sm text-muted-foreground mt-1">
@@ -522,7 +522,7 @@ export function UserPerformanceDetail() {
             <CardTitle className="text-base">Tasks Pending / In Progress</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
+            <div className="text-3xl font-bold text-foreground">
               {taskCounts.total_pending + taskCounts.total_in_progress}
             </div>
             <div className="text-sm text-muted-foreground mt-1">
@@ -536,7 +536,7 @@ export function UserPerformanceDetail() {
             <CardTitle className="text-base">Tasks Pending Review</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+            <div className="text-3xl font-bold text-foreground">
               {taskCounts.total_pending_review}
             </div>
             <Link
@@ -587,7 +587,7 @@ export function UserPerformanceDetail() {
           <div className="grid md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <CheckCircle2 className="h-5 w-5 text-foreground" />
                 <span className="text-sm font-medium">On Time</span>
               </div>
               <div className="text-2xl font-bold">{timeliness.on_time_count}</div>
@@ -597,7 +597,7 @@ export function UserPerformanceDetail() {
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                <XCircle className="h-5 w-5 text-foreground" />
                 <span className="text-sm font-medium">Overdue</span>
               </div>
               <div className="text-2xl font-bold">{timeliness.overdue_count}</div>
@@ -644,8 +644,8 @@ export function UserPerformanceDetail() {
               <div className="text-sm font-medium">Week-over-Week Change</div>
               <div className={`text-3xl font-bold flex items-center gap-2 ${
                 weeklyStats.week_over_week_change >= 0
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-red-600 dark:text-red-400'
+                  ? 'text-foreground'
+                  : 'text-muted-foreground'
               }`}>
                 {weeklyStats.week_over_week_change >= 0 ? (
                   <TrendingUp className="h-6 w-6" />
@@ -702,7 +702,7 @@ export function UserPerformanceDetail() {
               </div>
               <div className="space-y-2">
                 <div className="text-sm font-medium">Approved</div>
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                <div className="text-2xl font-bold text-foreground">
                   {reviewMetrics.approved_count}
                 </div>
                 <div className="text-xs text-muted-foreground">Tasks approved</div>
@@ -712,7 +712,7 @@ export function UserPerformanceDetail() {
                 <div className="text-2xl font-bold">{reviewMetrics.approval_rate.toFixed(1)}%</div>
                 <div className="w-full bg-muted rounded-full h-2 mt-2">
                   <div
-                    className="bg-green-600 dark:bg-green-400 h-2 rounded-full transition-all"
+                    className="bg-primary h-2 rounded-full transition-all"
                     style={{ width: `${reviewMetrics.approval_rate}%` }}
                   />
                 </div>

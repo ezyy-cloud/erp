@@ -15,7 +15,7 @@ export function OfflineIndicator() {
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-50 bg-orange-600 text-white px-4 py-2 text-sm font-medium text-center transition-transform duration-300 safe-area-top ${
+      className={`fixed top-0 left-0 right-0 z-50 bg-primary text-primary-foreground px-4 py-2 text-sm font-medium text-center transition-transform duration-300 safe-area-top ${
         isOffline ? 'translate-y-0' : '-translate-y-full'
       }`}
       style={{ paddingTop: 'max(env(safe-area-inset-top), 0.5rem)' }}

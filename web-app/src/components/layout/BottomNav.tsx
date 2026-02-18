@@ -6,6 +6,7 @@ import {
   CheckSquare, 
   Users, 
   BarChart3,
+  ClipboardList,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +23,13 @@ export function BottomNav() {
     label: 'Dashboard',
     path: '/dashboard',
     icon: LayoutDashboard,
+  });
+
+  // Bulletin Board is second for all users
+  navItems.push({
+    label: 'Bulletin Board',
+    path: '/bulletin-board',
+    icon: ClipboardList,
   });
 
   // Build navigation items based on permissions

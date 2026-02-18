@@ -1,6 +1,6 @@
 -- Seed Default Admin User (user-0)
 -- This creates the initial admin user for the system
--- Credentials: cloud.architect@ezyy.cloud / Admin@123
+-- Credentials: admin@furbank.com / Admin@123
 -- Role: super_admin
 
 -- Note: This script requires the admin user to be created in Supabase Auth first
@@ -9,7 +9,7 @@
 -- To create the auth user via Supabase Dashboard:
 -- 1. Go to Authentication > Users
 -- 2. Click "Add user" > "Create new user"
--- 3. Email: cloud.architect@ezyy.cloud
+-- 3. Email: admin@furbank.com
 -- 4. Password: Admin@123
 -- 5. Auto Confirm User: Yes
 -- 6. Copy the user ID and use it below
@@ -32,7 +32,7 @@ BEGIN
   -- Try to find existing admin user by email
   SELECT id INTO admin_user_id
   FROM auth.users
-  WHERE email = 'cloud.architect@ezyy.cloud'
+  WHERE email = 'admin@furbank.com'
   LIMIT 1;
 
   -- If admin user exists in auth, create/update the public.users record
@@ -47,7 +47,7 @@ BEGIN
       created_by
     ) VALUES (
       admin_user_id,
-      'cloud.architect@ezyy.cloud',
+      'admin@furbank.com',
       'System Administrator',
       super_admin_role_id,
       true,

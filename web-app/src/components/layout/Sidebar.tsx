@@ -6,7 +6,8 @@ import {
   CheckSquare, 
   Users, 
   BarChart3,
-  LogOut
+  LogOut,
+  ClipboardList
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,13 @@ export function Sidebar() {
     label: 'Dashboard',
     path: '/dashboard',
     icon: LayoutDashboard,
+  });
+
+  // Bulletin Board is second for all roles
+  navItems.push({
+    label: 'Bulletin Board',
+    path: '/bulletin-board',
+    icon: ClipboardList,
   });
 
   // Build navigation items based on role/permissions

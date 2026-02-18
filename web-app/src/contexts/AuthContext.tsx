@@ -23,6 +23,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Helper function to sign out and clear state (used internally)
+  const performSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Continue even if signOut fails
+    }
+    
+    // Clear service worker caches for security
+    try {
+      const { clearServiceWorkerCaches } = await import('@/lib/pwa/serviceWorkerRegistration');
+      await clearServiceWorkerCaches();
+    } catch {
+      // Continue with logout even if cache clearing fails
+    }
+    
+    // Clear IndexedDB offline queue
+    try {
+      const { clearQueue } = await import('@/lib/pwa/offlineQueue');
+      await clearQueue();
+    } catch {
+      // Continue with logout even if queue clearing fails
+    }
+    
+    setAppUser(null);
+    setUser(null);
+    setSession(null);
+    // Force a page reload to ensure clean state
+    window.location.href = '/login';
+  };
+
+  // Check if user is deleted or inactive and sign them out if so
+  const checkUserStatusAndSignOut = async (userData: any) => {
+    const isDeleted = userData?.deleted_at != null;
+    const isInactive = userData?.is_active === false;
+
+    if (isDeleted || isInactive) {
+      // User is deleted or inactive - sign them out immediately
+      await performSignOut();
+      return true; // Indicates user was signed out
+    }
+    return false; // User is valid
+  };
+
   // Fetch app user data (with role) from our users table
   const fetchAppUser = async (userId: string) => {
     try {
@@ -64,6 +108,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               roles: roleData ?? undefined,
             } as UserWithRole;
             
+            // Check if user is deleted or inactive
+            const wasSignedOut = await checkUserStatusAndSignOut(retryUserData);
+            if (wasSignedOut) {
+              return; // User was signed out, don't set appUser
+            }
+            
             setAppUser(userWithRole);
             return;
           }
@@ -104,12 +154,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           userWithRole.roles = role ?? undefined;
         }
         
+        // Check if user is deleted or inactive
+        const wasSignedOut = await checkUserStatusAndSignOut(retryUserData);
+        if (wasSignedOut) {
+          return; // User was signed out, don't set appUser
+        }
+        
         setAppUser(userWithRole);
         return;
       }
 
       if (userError) throw userError;
       if (!userData) return;
+
+      // Check if user is deleted or inactive BEFORE fetching role
+      const wasSignedOut = await checkUserStatusAndSignOut(userData);
+      if (wasSignedOut) {
+        return; // User was signed out, don't set appUser
+      }
 
       // Then get the role separately to avoid relationship ambiguity
       let roleData = null;
@@ -165,11 +227,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      return { error };
+
+      if (error) {
+        return { error };
+      }
+
+      // After successful authentication, check if user is deleted or inactive
+      if (data?.user) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('deleted_at, is_active')
+          .eq('id', data.user.id)
+          .single();
+
+        if (!userError && userData) {
+          const user = userData as { deleted_at: string | null; is_active: boolean };
+          const isDeleted = user.deleted_at != null;
+          const isInactive = user.is_active === false;
+
+          if (isDeleted || isInactive) {
+            // Sign out immediately and return error
+            await supabase.auth.signOut();
+            const reason = isDeleted 
+              ? 'Your account has been deleted. Please contact an administrator.'
+              : 'Your account has been deactivated. Please contact an administrator.';
+            return { error: new Error(reason) };
+          }
+        }
+      }
+
+      return { error: null };
     } catch (error) {
       return { error: error as Error };
     }
@@ -181,40 +272,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Removed unused function to fix build errors
 
   const signOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        // Still clear local state even if there's an error
-      }
-      
-      // Clear service worker caches for security
-      try {
-        const { clearServiceWorkerCaches } = await import('@/lib/pwa/serviceWorkerRegistration');
-        await clearServiceWorkerCaches();
-      } catch {
-        // Continue with logout even if cache clearing fails
-      }
-      
-      // Clear IndexedDB offline queue
-      try {
-        const { clearQueue } = await import('@/lib/pwa/offlineQueue');
-        await clearQueue();
-      } catch {
-        // Continue with logout even if queue clearing fails
-      }
-      
-      setAppUser(null);
-      setUser(null);
-      setSession(null);
-      // Force a page reload to ensure clean state
-      window.location.href = '/login';
-    } catch {
-      // Clear local state even on error
-      setAppUser(null);
-      setUser(null);
-      setSession(null);
-      window.location.href = '/login';
-    }
+    await performSignOut();
   };
 
   // Get role name from appUser

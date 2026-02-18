@@ -39,7 +39,10 @@ file_size_limit = "50MiB"
 
 [edge_runtime]
 enabled = true
-port = 54327
 
 [functions.generate-report]
 verify_jwt = false
+
+[functions.purge-soft-deleted-tasks]
+verify_jwt = false
+

@@ -88,6 +88,10 @@ export function useRealtimeTasks(filters?: TaskFilters) {
           projects!left (*)
         `);
 
+      // Always exclude soft-deleted tasks from normal views.
+      // Super Admins have a separate view (getDeletedTasks) for managing deleted tasks.
+      query = query.is('deleted_at', null);
+
       // Exclude archived tasks from default views (unless explicitly requested)
       // RLS policies should handle this, but we add explicit filter for clarity
       // Exception: when viewing closed tasks, we want to see archived tasks
@@ -429,6 +433,11 @@ export function useRealtimeTasks(filters?: TaskFilters) {
             // Check if task still matches filters
             let matchesFilter = true;
             
+            // Exclude soft-deleted tasks from the list
+            if (updatedTask.deleted_at) {
+              matchesFilter = false;
+            }
+
             // Check canonical lifecycle status filter (preferred)
             if (currentFilters?.taskStatus) {
               if (updatedTask.task_status !== currentFilters.taskStatus) {

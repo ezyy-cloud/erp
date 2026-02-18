@@ -7,6 +7,7 @@ import type { Task, Project, UserWithRole } from '@/lib/supabase/types';
 import { TaskLifecycleStatus, UserRole } from '@/lib/supabase/types';
 import { approveTask, requestChanges } from '@/lib/services/taskReviewService';
 import { unarchiveTask, markTaskDonePendingReview } from '@/lib/services/taskArchiveService';
+import { startWorkOnTask } from '@/lib/services/taskProgressService';
 import { useRealtimeTaskComments } from '@/hooks/useRealtimeTaskComments';
 import { useRealtimeTaskNotes } from '@/hooks/useRealtimeTaskNotes';
 import { useRealtimeTaskFiles } from '@/hooks/useRealtimeTaskFiles';
@@ -15,13 +16,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { CheckCircle2, XCircle, Clock, MessageSquare, Trash2, Archive, FileText, Image, File, Download, Edit, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, MessageSquare, Trash2, Archive, FileText, Image, File, Download, Edit, ArrowLeft, Play } from 'lucide-react';
 import { getPriorityDisplay, getTaskStatusDisplay, getDueDateDisplay } from '@/lib/utils/taskDisplay';
 import { Skeleton, SkeletonCard } from '@/components/skeletons';
 import { EditRequestButton } from '@/components/tasks/EditRequestButton';
 import { EditRequestForm } from '@/components/tasks/EditRequestForm';
 import { EditTaskForm } from '@/components/tasks/EditTaskForm';
 import { EditRequestReview } from '@/components/tasks/EditRequestReview';
+import { TaskStatusModal, type TaskStatusAction } from '@/components/tasks/TaskStatusModal';
 import { getTaskAssignees } from '@/lib/services/taskAssignmentService';
 import { getEditRequests } from '@/lib/services/taskEditRequestService';
 import { softDeleteTask } from '@/lib/services/taskDeletionService';
@@ -47,6 +49,9 @@ export function TaskDetail() {
   const [taskAssignees, setTaskAssignees] = useState<UserWithRole[]>([]);
   const [isUserAssignedToTask, setIsUserAssignedToTask] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [statusModalAction, setStatusModalAction] = useState<TaskStatusAction>('start-work');
+  const [statusModalLoading, setStatusModalLoading] = useState(false);
 
   // Fetch single task with real-time updates
   const [task, setTask] = useState<Task | null>(null);
@@ -451,23 +456,42 @@ export function TaskDetail() {
 
   // Removed handleUpdateTask - tasks are now managed through lifecycle functions only
 
-  const handleRequestReview = async () => {
+  const handleStatusModalConfirm = async (action: TaskStatusAction, note?: string) => {
     if (!id || !user) return;
 
     try {
-      setLoadingReview(true);
-      // Use markTaskDonePendingReview when user marks task as done
-      // This automatically sets status to 'done' and review_status to 'pending_review'
-      const { error } = await markTaskDonePendingReview(id, user.id);
-      if (error) throw error;
+      setStatusModalLoading(true);
+
+      if (action === 'start-work') {
+        const { success, error, message } = await startWorkOnTask(id, user.id, note);
+        if (error) throw error;
+        if (!success) throw new Error(message ?? 'Failed to start work');
+        alert(message ?? 'Task moved to Work-In-Progress');
+      } else if (action === 'mark-done' || action === 'request-review') {
+        // Both mark-done and request-review use the same function
+        const { error } = await markTaskDonePendingReview(id, user.id);
+        if (error) throw error;
+        alert('Task marked as done and review requested successfully');
+      }
+
+      setStatusModalOpen(false);
       // Task will update automatically via real-time subscription
-      alert('Task marked as done and review requested successfully');
     } catch (error: any) {
-      console.error('Error requesting review:', error);
-      alert(`Failed to request review: ${error?.message ?? 'Unknown error'}`);
+      console.error('Error changing task status:', error);
+      alert(`Failed to change task status: ${error?.message ?? 'Unknown error'}`);
     } finally {
-      setLoadingReview(false);
+      setStatusModalLoading(false);
     }
+  };
+
+  const handleRequestReview = () => {
+    setStatusModalAction('request-review');
+    setStatusModalOpen(true);
+  };
+
+  const handleStartWork = () => {
+    setStatusModalAction('start-work');
+    setStatusModalOpen(true);
   };
 
   const handleApprove = async () => {
@@ -1203,22 +1227,41 @@ export function TaskDetail() {
                 </div>
               )}
 
+              {/* Action: Start Work (ToDo → Work-In-Progress) */}
+              {taskIsToDo && isUserAssignedToTask && (
+                <Button
+                  onClick={handleStartWork}
+                  disabled={statusModalLoading}
+                  className="w-full min-h-[44px]"
+                  variant="default"
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Start Work
+                </Button>
+              )}
+
+              {taskIsToDo && !isUserAssignedToTask && (
+                <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+                  Only assigned users can start work on tasks. This task is read-only for you.
+                </div>
+              )}
+
               {/* Action: Request Review (Work-In-Progress → Done) */}
               {taskIsWorkInProgress && isUserAssignedToTask && !permissions.canReviewTasks && (
-                    <Button
-                      onClick={handleRequestReview}
-                      disabled={loadingReview}
-                      className="w-full min-h-[44px]"
+                <Button
+                  onClick={handleRequestReview}
+                  disabled={statusModalLoading}
+                  className="w-full min-h-[44px]"
                   variant="default"
-                    >
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Request Review
-                    </Button>
-                  )}
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Request Review
+                </Button>
+              )}
 
               {taskIsWorkInProgress && !isUserAssignedToTask && !permissions.canReviewTasks && (
                 <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
-                  Only assigned users can request review for tasks in Work-In-Progress.
+                  Only assigned users can request review for tasks in Work-In-Progress. This task is read-only for you.
                 </div>
               )}
 
@@ -1280,12 +1323,16 @@ export function TaskDetail() {
                   </Button>
               )}
 
-              {/* No actions available */}
-              {taskIsToDo && (
-                <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
-                  Start working on this task by adding a comment, note, or uploading a file. The task will automatically move to Work-In-Progress.
-                </div>
-              )}
+              {/* Status Modal */}
+              <TaskStatusModal
+                isOpen={statusModalOpen}
+                onClose={() => !statusModalLoading && setStatusModalOpen(false)}
+                onConfirm={handleStatusModalConfirm}
+                action={statusModalAction}
+                taskTitle={task?.title ?? ''}
+                currentStatus={taskLifecycleStatus ?? 'Unknown'}
+                loading={statusModalLoading}
+              />
 
               {taskIsClosed && !permissions.canArchiveTasks && (
                 <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">

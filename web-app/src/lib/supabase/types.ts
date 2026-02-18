@@ -437,6 +437,104 @@ export interface Database {
           created_by?: string | null;
         };
       };
+      bulletins: {
+        Row: {
+          id: string;
+          title: string;
+          body: string;
+          creator_id: string;
+          expires_at: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          body: string;
+          creator_id: string;
+          expires_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          body?: string;
+          creator_id?: string;
+          expires_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+      };
+      todo_items: {
+        Row: {
+          id: string;
+          text: string;
+          creator_id: string;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          text: string;
+          creator_id: string;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          text?: string;
+          creator_id?: string;
+          created_at?: string;
+          updated_at?: string;
+          deleted_at?: string | null;
+        };
+      };
+      todo_assignees: {
+        Row: {
+          id: string;
+          todo_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          todo_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          todo_id?: string;
+          user_id?: string;
+          created_at?: string;
+        };
+      };
+      todo_completions: {
+        Row: {
+          id: string;
+          todo_id: string;
+          user_id: string;
+          completed_at: string;
+        };
+        Insert: {
+          id?: string;
+          todo_id: string;
+          user_id: string;
+          completed_at?: string;
+        };
+        Update: {
+          id?: string;
+          todo_id?: string;
+          user_id?: string;
+          completed_at?: string;
+        };
+      };
     };
     Views: {
       [key: string]: never;
@@ -655,6 +753,10 @@ export type TaskProgressLog = Database['public']['Tables']['task_progress_log'][
 export type TaskEditRequest = Database['public']['Tables']['task_edit_requests']['Row'];
 export type TaskAssignee = Database['public']['Tables']['task_assignees']['Row'];
 export type Notification = Database['public']['Tables']['notifications']['Row'];
+export type Bulletin = Database['public']['Tables']['bulletins']['Row'];
+export type TodoItem = Database['public']['Tables']['todo_items']['Row'];
+export type TodoAssignee = Database['public']['Tables']['todo_assignees']['Row'];
+export type TodoCompletion = Database['public']['Tables']['todo_completions']['Row'];
 
 // Extended types with relations
 export type UserWithRole = User & {
@@ -741,6 +843,8 @@ export const NotificationType = {
   REVIEW_COMPLETED: 'review_completed',
   COMMENT_ADDED: 'comment_added',
   DOCUMENT_UPLOADED: 'document_uploaded',
+  TODO_COMPLETED: 'todo_completed',
+  BULLETIN_POSTED: 'bulletin_posted',
 } as const;
 
 export type NotificationType = typeof NotificationType[keyof typeof NotificationType];

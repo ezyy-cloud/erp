@@ -22,6 +22,18 @@ import { isTaskClosed } from '@/lib/services/projectService';
 import { Skeleton, SkeletonTaskCard } from '@/components/skeletons';
 import { AssigneeSelector } from '@/components/tasks/AssigneeSelector';
 
+// Helper function to get user initials
+const getUserInitials = (user: UserWithRole | null | undefined): string => {
+  if (!user) return '?';
+  const name = user.full_name ?? user.email ?? '';
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+};
+
 // Memoized task list item component
 const TaskListItem = memo(({ task, searchQuery }: { task: TaskWithRelations; searchQuery?: string }) => {
   const priorityDisplay = getPriorityDisplay(task.priority);
@@ -37,6 +49,11 @@ const TaskListItem = memo(({ task, searchQuery }: { task: TaskWithRelations; sea
   const closedByProject = (task as any).closed_reason === 'project_closed';
   const isArchived = !!(task as any).archived_at;
 
+  // Get assignees - prefer multi-assignee array, fallback to legacy assigned_to
+  const assignees = (task.assignees ?? []).length > 0 
+    ? (task.assignees ?? [])
+    : (task.assigned_user ? [task.assigned_user] : []);
+
   return (
     <Link
       key={task.id}
@@ -46,7 +63,7 @@ const TaskListItem = memo(({ task, searchQuery }: { task: TaskWithRelations; sea
       <Card
         className={`transition-all duration-200 border-l-4 ${priorityDisplay.borderColor} group w-full ${
           taskIsClosed || isArchived
-            ? 'bg-gray-50 opacity-75 cursor-not-allowed' 
+            ? 'bg-gray-50 dark:bg-gray-900 dark:border-gray-700 opacity-75 cursor-not-allowed'
             : 'hover:shadow-lg sm:hover:scale-[1.02] cursor-pointer'
         }`}
       >
@@ -77,10 +94,41 @@ const TaskListItem = memo(({ task, searchQuery }: { task: TaskWithRelations; sea
           </p>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-              {task.assigned_to && (
-                <span className="text-xs text-muted-foreground break-words">
-                  Assigned to: {(task.assigned_user as UserWithRole)?.full_name ?? (task.assigned_user as UserWithRole)?.email ?? 'Unknown'}
-                </span>
+              {/* Assignees Display */}
+              {assignees.length > 0 ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground shrink-0">Assigned to:</span>
+                  <div className="flex items-center gap-1.5 -space-x-2">
+                    {assignees.slice(0, 3).map((assignee) => {
+                      const user = assignee as UserWithRole;
+                      const initials = getUserInitials(user);
+                      const displayName = user.full_name ?? user.email ?? 'Unknown';
+                      return (
+                        <div
+                          key={user.id}
+                          className="relative group/avatar"
+                          title={displayName}
+                        >
+                          <div className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold border-2 border-background shrink-0">
+                            {initials}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {assignees.length > 3 && (
+                      <div className="h-6 w-6 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-semibold border-2 border-background shrink-0">
+                        +{assignees.length - 3}
+                      </div>
+                    )}
+                  </div>
+                  {assignees.length === 1 && (
+                    <span className="text-xs text-muted-foreground hidden sm:inline">
+                      {assignees[0]?.full_name ?? assignees[0]?.email ?? 'Unknown'}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground italic">Unassigned</span>
               )}
               {dueDateDisplay && (() => {
                 const DueDateIcon = dueDateDisplay.icon;
@@ -126,6 +174,7 @@ export function Tasks() {
     priority: 'medium' as TaskPriority,
         status: 'to_do' as TaskStatus, // Legacy field - task_status will be set to 'ToDo' by default
   });
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   // Debounce search input
   useEffect(() => {
@@ -353,6 +402,8 @@ export function Tasks() {
       if (error) throw error;
 
       const taskId = (newTask as any)?.id;
+      
+      // Assign users if provided
       if (taskId && formData.assignee_ids.length > 0) {
         const { error: assignError } = await assignTask(
           taskId,
@@ -365,6 +416,46 @@ export function Tasks() {
         }
       }
 
+      // Upload files if provided
+      if (taskId && selectedFiles.length > 0) {
+        const uploadPromises = selectedFiles.map(async (file) => {
+          try {
+            const fileName = `${taskId}/${Date.now()}_${file.name}`;
+            const filePath = fileName;
+
+            // Upload to Supabase Storage
+            const { error: uploadError } = await supabase.storage
+              .from('task-files')
+              .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            // Create file record
+            const { error: dbError } = await ((supabase.from('task_files') as any).insert({
+              task_id: taskId,
+              user_id: authUser.id,
+              file_name: file.name,
+              file_path: filePath,
+              file_size: file.size,
+              mime_type: file.type,
+              created_by: authUser.id,
+            }) as any);
+
+            if (dbError) throw dbError;
+          } catch (error) {
+            console.error('Error uploading file:', file.name, error);
+            throw error;
+          }
+        });
+
+        try {
+          await Promise.all(uploadPromises);
+        } catch (error) {
+          console.error('Error uploading files:', error);
+          alert('Task created, but some files failed to upload.');
+        }
+      }
+
       setFormData({
         title: '',
         description: '',
@@ -374,6 +465,7 @@ export function Tasks() {
         priority: TaskPriority.MEDIUM,
         status: TaskStatus.TO_DO,
       });
+      setSelectedFiles([]);
       setShowCreateForm(false);
       // Tasks will update automatically via real-time subscription
     } catch (error) {
@@ -608,6 +700,43 @@ export function Tasks() {
                     <option value={TaskPriority.URGENT}>Urgent</option>
                   </Select>
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="files">Attach Documents (Optional)</Label>
+                <Input
+                  id="files"
+                  type="file"
+                  multiple
+                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files ?? []);
+                    setSelectedFiles(files);
+                  }}
+                  className="min-h-[44px]"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Allowed file types: PDF, JPEG, PNG, DOC, DOCX, XLS, XLSX
+                </p>
+                {selectedFiles.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} className="text-sm text-muted-foreground flex items-center justify-between">
+                        <span className="truncate">{file.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
+                          }}
+                          className="text-destructive hover:text-destructive/80 ml-2"
+                          title={`Remove ${file.name}`}
+                          aria-label={`Remove ${file.name}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <Button type="submit">Create Task</Button>
             </form>

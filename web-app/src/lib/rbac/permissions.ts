@@ -62,6 +62,10 @@ export interface Permissions {
   
   // Reports (future-ready)
   canViewReports: boolean;
+
+  // Bulletins & To-Dos
+  canManageBulletins: boolean;
+  canManageTodos: boolean;
 }
 
 /**
@@ -107,6 +111,8 @@ export function getPermissions(roleName: string | null): Permissions {
         canManageUsers: false, // System-level permissions not changeable
         canViewReports: true,
         canUpdateTaskStatus: true,
+        canManageBulletins: true,
+        canManageTodos: true,
       };
       
     case UserRole.ADMIN:
@@ -139,6 +145,8 @@ export function getPermissions(roleName: string | null): Permissions {
         canManageUsers: false,
         canViewReports: false, // Future feature
         canUpdateTaskStatus: true,
+        canManageBulletins: true,
+        canManageTodos: true,
       };
       
     case UserRole.USER:
@@ -173,6 +181,8 @@ export function getPermissions(roleName: string | null): Permissions {
         canManageUsers: false,
         canViewReports: false,
         canUpdateTaskStatus: true, // Users can update status on assigned tasks only
+        canManageBulletins: false,
+        canManageTodos: false,
       };
   }
 }

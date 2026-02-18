@@ -212,6 +212,9 @@ export function Dashboard() {
     closed: stats.closedTasksCount ?? 0,
   };
 
+  // Derived metrics
+  const openTasksCount = taskMetrics.total - taskMetrics.closed;
+
   return (
     <div className="space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden">
 
@@ -298,6 +301,7 @@ export function Dashboard() {
                 }).map((summary) => {
                   const statusDisplay = getTaskStatusDisplay(summary.status);
                   const StatusIcon = statusDisplay.icon;
+                  const isDoneStatus = summary.status === 'Done' || summary.status === 'done';
                   const hasUrgency = summary.overdue_count > 0 || summary.due_today_count > 0;
 
                   // Map status to URL parameter - use canonical lifecycle if available
@@ -328,7 +332,13 @@ export function Dashboard() {
                         {/* Status Header - Icon and Label */}
                         <div className="flex items-center gap-2 sm:gap-3 lg:flex-col lg:items-start lg:gap-2 flex-1 min-w-0">
                           <div className="flex items-center gap-2 lg:w-full">
-                            <StatusIcon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 lg:h-5 lg:w-5 shrink-0 ${statusDisplay.color}`} />
+                            <StatusIcon
+                              className={`h-3.5 w-3.5 sm:h-4 sm:w-4 lg:h-5 lg:w-5 shrink-0 ${
+                                isDoneStatus
+                                  ? 'text-green-600 dark:text-green-400'
+                                  : statusDisplay.color
+                              }`}
+                            />
                             <span className="text-xs sm:text-sm lg:text-sm font-semibold capitalize truncate lg:truncate-none">
                               {summary.status === 'ToDo' ? 'To Do' :
                                summary.status === 'Work-In-Progress' ? 'Work-In-Progress' :
@@ -354,37 +364,35 @@ export function Dashboard() {
                           {/* Show productivity metrics for done tasks, urgency for others */}
                           {(summary.status === 'done' || summary.status === 'Done') ? (
                             <div className="flex flex-wrap gap-x-2 gap-y-1 lg:flex-col lg:gap-1.5 text-xs lg:text-xs">
-                              {/* Completion Rate */}
+                              {/* Completion Rate (Done / Open) */}
                               <div className="flex items-center gap-1.5 lg:justify-between">
                                 <span className="text-[10px] lg:text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
                                   Rate
                                 </span>
                                 <span className={`font-bold text-xs lg:text-sm tabular-nums ${
-                                  taskMetrics.total > 0 
+                                  openTasksCount > 0 
                                     ? 'text-green-700 dark:text-green-400' 
                                     : 'text-muted-foreground opacity-60'
                                 }`}>
-                                  {taskMetrics.total > 0 
-                                    ? `${Math.round((summary.total_count / taskMetrics.total) * 100)}%`
+                                  {openTasksCount > 0 
+                                    ? `${Math.round((summary.total_count / openTasksCount) * 100)}%`
                                     : '0%'}
                                 </span>
                               </div>
-                              {/* Done vs Open Ratio */}
+                              {/* Done vs Open */}
                               <div className="flex items-center gap-1.5 lg:justify-between">
                                 <span className="text-[10px] lg:text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
                                   vs Open
                                 </span>
                                 <span className={`font-bold text-xs lg:text-sm tabular-nums ${
-                                  taskMetrics.total > summary.total_count
+                                  openTasksCount > 0
                                     ? 'text-primary' 
                                     : 'text-muted-foreground opacity-60'
                                 }`}>
-                                  {taskMetrics.total > summary.total_count
-                                    ? `${taskMetrics.total - summary.total_count}`
-                                    : '0'}
+                                  {openTasksCount > 0 ? `${openTasksCount}` : '0'}
                                 </span>
                               </div>
-                              {/* Productivity Score (done / total) */}
+                              {/* Productivity Score (done / open) */}
                               <div className="flex items-center gap-1.5 lg:justify-between">
                                 <span className="text-[10px] lg:text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
                                   Score
@@ -394,8 +402,8 @@ export function Dashboard() {
                                     ? 'text-foreground' 
                                     : 'text-muted-foreground opacity-60'
                                 }`}>
-                                  {taskMetrics.total > 0
-                                    ? `${summary.total_count}/${taskMetrics.total}`
+                                  {openTasksCount > 0
+                                    ? `${summary.total_count}/${openTasksCount}`
                                     : '0/0'}
                                 </span>
                               </div>
@@ -446,6 +454,90 @@ export function Dashboard() {
                     </Link>
                   );
                 })}
+
+                {/* Closed (Complete) card comparing Open vs Closed */}
+                {taskMetrics.closed > 0 && (
+                  (() => {
+                    const closedStatus = getTaskStatusDisplay('Closed');
+                    const ClosedIcon = closedStatus.icon;
+                    return (
+                      <div className="block lg:flex-1">
+                        <div
+                          className="flex flex-col lg:flex-col gap-2 lg:gap-3 p-2.5 sm:p-3 lg:p-4 rounded-md border bg-card border-border"
+                        >
+                          {/* Status Header */}
+                          <div className="flex items-center gap-2 sm:gap-3 lg:flex-col lg:items-start lg:gap-2 flex-1 min-w-0">
+                            <div className="flex items-center gap-2 lg:w-full">
+                              <ClosedIcon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 lg:h-5 lg:w-5 shrink-0 ${closedStatus.color}`} />
+                              <span className="text-xs sm:text-sm lg:text-sm font-semibold truncate lg:truncate-none">
+                                Closed (Complete)
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Metrics */}
+                          <div className="flex flex-col lg:flex-col gap-1.5 lg:gap-2">
+                            {/* Total Closed */}
+                            <div className="flex items-baseline justify-between lg:flex-col lg:items-start lg:gap-1">
+                              <span className="text-[10px] sm:text-xs lg:text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                                Total
+                              </span>
+                              <span className="text-base sm:text-lg lg:text-2xl font-bold text-foreground tabular-nums">
+                                {taskMetrics.closed}
+                              </span>
+                            </div>
+
+                            {/* Closed Rate (Closed / Total) */}
+                            <div className="flex items-center gap-1.5 lg:justify-between">
+                              <span className="text-[10px] lg:text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
+                                Rate
+                              </span>
+                              <span className={`font-bold text-xs lg:text-sm tabular-nums ${
+                                taskMetrics.total > 0
+                                  ? 'text-green-700 dark:text-green-400'
+                                  : 'text-muted-foreground opacity-60'
+                              }`}>
+                                {taskMetrics.total > 0
+                                  ? `${Math.round((taskMetrics.closed / taskMetrics.total) * 100)}%`
+                                  : '0%'}
+                              </span>
+                            </div>
+
+                            {/* Open vs Closed */}
+                            <div className="flex items-center gap-1.5 lg:justify-between">
+                              <span className="text-[10px] lg:text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
+                                vs Open
+                              </span>
+                              <span className={`font-bold text-xs lg:text-sm tabular-nums ${
+                                openTasksCount > 0
+                                  ? 'text-primary'
+                                  : 'text-muted-foreground opacity-60'
+                              }`}>
+                                {openTasksCount > 0 ? `${openTasksCount}` : '0'}
+                              </span>
+                            </div>
+
+                            {/* Score (Closed / Open) */}
+                            <div className="flex items-center gap-1.5 lg:justify-between">
+                              <span className="text-[10px] lg:text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
+                                Score
+                              </span>
+                              <span className={`font-semibold text-xs lg:text-sm tabular-nums ${
+                                taskMetrics.closed > 0
+                                  ? 'text-foreground'
+                                  : 'text-muted-foreground opacity-60'
+                              }`}>
+                                {openTasksCount > 0
+                                  ? `${taskMetrics.closed}/${openTasksCount}`
+                                  : '0/0'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()
+                )}
               </div>
               
               {/* Task Distribution Bar Graph */}

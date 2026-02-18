@@ -55,7 +55,43 @@ export async function createUser(params: CreateUserParams): Promise<CreateUserRe
   // Generate password if not provided
   const password = providedPassword ?? generatePassword(12);
   
+  // Check for existing users (deleted or active) before attempting creation
+  let deletedUser: { id: string; email: string; full_name: string | null; deleted_at: string } | null = null;
+  
   try {
+    // Check if a deleted user exists with this email
+    const { data: deletedUserData } = await supabase
+      .from('users')
+      .select('id, email, full_name, deleted_at')
+      .eq('email', email)
+      .not('deleted_at', 'is', null)
+      .maybeSingle();
+
+    deletedUser = deletedUserData as { id: string; email: string; full_name: string | null; deleted_at: string } | null;
+
+    if (deletedUser) {
+      throw new Error(
+        `A deleted user with email "${email}" already exists. ` +
+        `Please restore the existing user instead of creating a new one. ` +
+        `User ID: ${deletedUser.id}`
+      );
+    }
+
+    // Check if an active user exists with this email
+    const { data: activeUser } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('email', email)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (activeUser) {
+      throw new Error(
+        `A user with email "${email}" already exists. ` +
+        `Please use a different email address.`
+      );
+    }
+
     // Get the role ID for the specified role
     const { data: roleData, error: roleError } = await supabase
       .from('roles')
@@ -171,6 +207,25 @@ export async function createUser(params: CreateUserParams): Promise<CreateUserRe
     });
     
     if (authError) {
+      // Check if error is due to email already existing in auth.users
+      if (authError.message?.includes('already registered') || 
+          authError.message?.includes('already exists') ||
+          (authError as any).code === 'signup_disabled' ||
+          (authError as any).status === 400) {
+        // Email exists in auth.users - check if it's a deleted user in public.users
+        const deletedUserCheck = deletedUser as { id: string; email: string; full_name: string | null; deleted_at: string } | null;
+        if (deletedUserCheck && deletedUserCheck.id) {
+          throw new Error(
+            `A deleted user with email "${email}" exists in both authentication and database. ` +
+            `Please restore the existing user (ID: ${deletedUserCheck.id}) instead of creating a new one.`
+          );
+        } else {
+          throw new Error(
+            `Email "${email}" is already registered in the authentication system. ` +
+            `If this is a deleted user, please restore them instead of creating a new account.`
+          );
+        }
+      }
       throw authError;
     }
     
@@ -260,6 +315,7 @@ export async function getAllUsers() {
   const { data: users, error: usersError } = await supabase
     .from('users')
     .select('*, roles!users_role_id_fkey(*)')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false });
   
   if (usersError) {
@@ -269,6 +325,7 @@ export async function getAllUsers() {
       const { data: usersData, error: usersDataError } = await supabase
         .from('users')
         .select('*')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
       
       if (usersDataError) {

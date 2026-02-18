@@ -205,10 +205,10 @@ const UserCard = memo(({
                     e.stopPropagation();
                     onEdit(user);
                   }}
-                  className="h-6 w-6 p-0"
+                  className="h-10 w-10 p-0"
                   title="Edit User"
                 >
-                  <Edit className="h-3 w-3" />
+                  <Edit className="h-9 w-9" />
                 </Button>
               </div>
             </div>

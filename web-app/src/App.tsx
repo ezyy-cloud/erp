@@ -12,6 +12,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 // Lazy load page components for code splitting
 const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const TodoNotices = lazy(() => import('./pages/TodoNotices').then(m => ({ default: m.TodoNotices })));
 const Projects = lazy(() => import('./pages/Projects').then(m => ({ default: m.Projects })));
 const ProjectDetail = lazy(() => import('./pages/ProjectDetail').then(m => ({ default: m.ProjectDetail })));
 const Tasks = lazy(() => import('./pages/Tasks').then(m => ({ default: m.Tasks })));
@@ -90,6 +91,16 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <Dashboard />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/bulletin-board"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <TodoNotices />
               </AppLayout>
             </ProtectedRoute>
           }

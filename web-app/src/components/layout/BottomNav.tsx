@@ -4,8 +4,6 @@ import {
   LayoutDashboard,
   FolderKanban, 
   CheckSquare, 
-  Users, 
-  BarChart3,
   ClipboardList,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -47,22 +45,6 @@ export function BottomNav() {
         icon: CheckSquare,
       }
     );
-
-    if (permissions.canViewAllUsers) {
-      navItems.push({
-        label: 'Users',
-        path: '/users',
-        icon: Users,
-      });
-    }
-
-    if (permissions.canViewReports) {
-      navItems.push({
-        label: 'Reports',
-        path: '/reports',
-        icon: BarChart3,
-      });
-    }
   } else {
     // Regular users see Dashboard and Tasks
     navItems.push({

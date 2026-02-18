@@ -36,7 +36,6 @@ supabase login
 ### 3. Link Your Project
 
 ```bash
-cd web-app
 supabase link --project-ref gqyigihstsxligqmsrwc
 ```
 

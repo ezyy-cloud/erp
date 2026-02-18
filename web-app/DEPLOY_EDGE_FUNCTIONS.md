@@ -21,7 +21,6 @@ This will open your browser to authenticate.
 ## Step 3: Link Your Project
 
 ```bash
-cd web-app
 supabase link --project-ref gqyigihstsxligqmsrwc
 ```
 

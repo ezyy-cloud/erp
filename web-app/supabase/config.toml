@@ -46,3 +46,6 @@ verify_jwt = false
 [functions.purge-soft-deleted-tasks]
 verify_jwt = false
 
+[functions.send-notification-email]
+verify_jwt = false
+

@@ -80,16 +80,8 @@ serve(async (req) => {
     );
   }
 
-  const authHeader = req.headers.get('Authorization');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!authHeader || !serviceRoleKey || authHeader.replace('Bearer ', '') !== serviceRoleKey) {
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized' }),
-      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-
-  let payload: { record?: NotificationRecord; type?: string; table?: string };
+  let payload: { record?: NotificationRecord; type?: string; table?: string; schema?: string };
   try {
     payload = await req.json();
   } catch {
@@ -99,17 +91,48 @@ serve(async (req) => {
     );
   }
 
+  // Accept either (1) Bearer service role or (2) valid Supabase INSERT webhook payload for notifications
+  // so that Dashboard-configured webhooks (which may not send Authorization) still work.
+  const authHeader = req.headers.get('Authorization');
+  const hasValidBearer = !!(
+    authHeader &&
+    serviceRoleKey &&
+    authHeader.replace('Bearer ', '').trim() === serviceRoleKey
+  );
+  const looksLikeWebhook =
+    payload.type === 'INSERT' &&
+    payload.table === 'notifications' &&
+    payload.schema === 'public' &&
+    payload.record &&
+    typeof payload.record === 'object';
+
+  if (!hasValidBearer && !looksLikeWebhook) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   const record = payload.record;
   if (!record?.recipient_user_id || !record?.type || !record?.title || !record?.message) {
+    console.error('send-notification-email: missing record or required fields', {
+      hasRecord: !!record,
+      keys: record ? Object.keys(record) : [],
+    });
     return new Response(
       JSON.stringify({ error: 'Missing record or required fields: recipient_user_id, type, title, message' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 
+  console.log('send-notification-email: processing', {
+    notificationType: record.type,
+    recipientUserId: record.recipient_user_id,
+  });
+
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-  if (!supabaseUrl) {
-    console.error('SUPABASE_URL not set');
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set');
     return new Response(
       JSON.stringify({ error: 'Server configuration error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -127,7 +150,10 @@ serve(async (req) => {
     .maybeSingle();
 
   if (userError || !user?.email || user.deleted_at != null || user.is_active === false) {
-    // Skip send; return 200 so webhook does not retry
+    console.log('send-notification-email: skipped – recipient not found or inactive', {
+      recipientUserId: record.recipient_user_id,
+      userError: userError?.message,
+    });
     return new Response(
       JSON.stringify({ skipped: true, reason: 'recipient not found or inactive' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -135,6 +161,9 @@ serve(async (req) => {
   }
 
   if (user.email_notifications_enabled === false) {
+    console.log('send-notification-email: skipped – user disabled email notifications', {
+      recipientUserId: record.recipient_user_id,
+    });
     return new Response(
       JSON.stringify({ skipped: true, reason: 'user disabled email notifications' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -143,7 +172,7 @@ serve(async (req) => {
 
   const resendApiKey = Deno.env.get('RESEND_API_KEY');
   if (!resendApiKey) {
-    console.error('RESEND_API_KEY not set');
+    console.error('send-notification-email: RESEND_API_KEY not set');
     return new Response(
       JSON.stringify({ skipped: true, reason: 'Resend not configured' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -171,19 +200,20 @@ serve(async (req) => {
 
     if (!res.ok) {
       const errText = await res.text();
-      console.error('Resend send failed:', res.status, errText);
+      console.error('send-notification-email: Resend API failed', { status: res.status, body: errText });
       return new Response(
         JSON.stringify({ error: 'Failed to send email', details: errText }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log('send-notification-email: sent', { to: user.email, type: record.type });
     return new Response(
       JSON.stringify({ sent: true, to: user.email }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (e) {
-    console.error('Resend request error:', e);
+    console.error('send-notification-email: Resend request error', e);
     return new Response(
       JSON.stringify({ error: String(e) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

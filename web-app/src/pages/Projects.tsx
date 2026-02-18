@@ -58,8 +58,8 @@ export function Projects() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({ name: '', description: '' });
 
-  // Use real-time projects hook
-  const { projects, loading } = useRealtimeProjects();
+  // Use real-time projects hook (refetch so new projects appear without reload)
+  const { projects, loading, refetch } = useRealtimeProjects();
 
   // Set action button in top bar
   useEffect(() => {
@@ -118,7 +118,7 @@ export function Projects() {
 
       setFormData({ name: '', description: '' });
       setShowCreateForm(false);
-      // Projects will update automatically via real-time subscription
+      await refetch();
     } catch (error) {
       console.error('Error creating project:', error);
       alert('Failed to create project');

@@ -103,198 +103,60 @@ export async function createUser(params: CreateUserParams): Promise<CreateUserRe
       throw new Error(`Role '${role}' not found`);
     }
     
-    // Create user in Supabase Auth
-    // Note: This requires admin privileges. In production, this should be done
-    // via a serverless function with the service role key.
-    // 
-    // For now, we'll use the Supabase REST API approach or create a user
-    // via the admin client. However, since we're in the frontend, we need
-    // to use a different approach.
-    //
-    // Option 1: Use Supabase Admin API (requires service role key - not safe in frontend)
-    // Option 2: Create a serverless function (recommended)
-    // Option 3: Use Supabase's built-in user invitation system
-    
-    // For this implementation, we'll use a workaround:
-    // We'll create the user via Supabase's signUp method with a temporary password,
-    // then immediately update it. However, this requires email confirmation.
-    //
-    // Better approach: Use Supabase Admin API via a serverless function.
-    // For now, this is a placeholder that shows the structure.
-    
-    // IMPORTANT: This is a placeholder. Replace with serverless function call:
-    // const response = await fetch('/api/create-user', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ email, fullName, role, password })
-    // });
-    
-    // For development/testing, we can use Supabase's admin client if available
-    // But this should NOT be used in production from the frontend
-    
-    // Try to use Edge Function if available (better approach)
+    // User creation is done only via the create-user Edge Function (service role) so the admin session is never touched.
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    let { data: { session: currentSession } } = await supabase.auth.getSession();
-    
-    if (currentSession && supabaseUrl) {
-      // Refresh the session to ensure we have a valid token
-      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession(currentSession);
-      
-      if (refreshError || !refreshedSession) {
-        console.warn('Failed to refresh session, using existing token:', refreshError);
-        // Continue with existing session if refresh fails
-      } else {
-        currentSession = refreshedSession;
-      }
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
 
-      try {
-        const response = await fetch(
-          `${supabaseUrl}/functions/v1/create-user`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${currentSession.access_token}`,
-              'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY ?? '',
-            },
-            body: JSON.stringify({
-              email,
-              fullName,
-              role,
-              password,
-            }),
-          }
-        );
-
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-          return {
-            userId: data.userId,
-            email: data.email,
-            password: data.password,
-          };
-        }
-
-        // If Edge Function returns error, log it but continue to fallback
-        console.warn('Edge Function error:', data.error);
-      } catch (fetchError) {
-        // Edge Function might not be deployed yet, use fallback
-        console.warn('Edge Function not available, using fallback:', fetchError);
-      }
+    if (!currentSession) {
+      throw new Error('Not authenticated. Please sign in to create users.');
+    }
+    if (!supabaseUrl) {
+      throw new Error('Missing Supabase URL. Check VITE_SUPABASE_URL in your environment.');
     }
 
-    // Fallback: Use signUp method (requires email confirmation disabled)
-    // Get current admin session before creating new user
-    // (signUp will auto-sign-in the new user, so we need to restore admin session)
-    
-    // Create user via signUp
-    // Note: For testing phase, email confirmation should be disabled in Supabase Dashboard
-    // Settings → Authentication → Email Auth → Confirm email: OFF
-    // This allows dummy/non-functional emails during testing
-    // In production, enable email confirmation and use Edge Functions for user creation
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: undefined, // No email redirect for testing phase
-        data: {
-          full_name: fullName,
+    const refreshed = await supabase.auth.refreshSession(currentSession);
+    const session = refreshed.data.session ?? currentSession;
+
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/create-user`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY ?? '',
         },
-        // Disable email confirmation requirement for testing
-        // In production, this should be handled via Edge Function with service role
-      },
-    });
-    
-    if (authError) {
-      // Check if error is due to email already existing in auth.users
-      if (authError.message?.includes('already registered') || 
-          authError.message?.includes('already exists') ||
-          (authError as any).code === 'signup_disabled' ||
-          (authError as any).status === 400) {
-        // Email exists in auth.users - check if it's a deleted user in public.users
-        const deletedUserCheck = deletedUser as { id: string; email: string; full_name: string | null; deleted_at: string } | null;
-        if (deletedUserCheck && deletedUserCheck.id) {
-          throw new Error(
-            `A deleted user with email "${email}" exists in both authentication and database. ` +
-            `Please restore the existing user (ID: ${deletedUserCheck.id}) instead of creating a new one.`
-          );
-        } else {
-          throw new Error(
-            `Email "${email}" is already registered in the authentication system. ` +
-            `If this is a deleted user, please restore them instead of creating a new account.`
-          );
-        }
+        body: JSON.stringify({
+          email,
+          fullName,
+          role,
+          password,
+        }),
       }
-      throw authError;
-    }
-    
-    if (!authData.user) {
-      throw new Error('Failed to create user in authentication system');
+    );
+
+    const data = await response.json().catch(() => ({}));
+
+    if (response.ok && data.success) {
+      return {
+        userId: data.userId,
+        email: data.email,
+        password: data.password,
+      };
     }
 
-    // Immediately sign out the newly created user and restore admin session
-    // This prevents the admin from being signed into the new user's account
-    await supabase.auth.signOut();
-    
-    // Restore the admin's session if it existed
-    if (currentSession) {
-      try {
-        const { error: restoreError } = await supabase.auth.setSession({
-          access_token: currentSession.access_token,
-          refresh_token: currentSession.refresh_token,
-        });
-        
-        if (restoreError) {
-          console.warn('Failed to restore admin session after user creation:', restoreError);
-          // Try to refresh the session
-          const { error: refreshError } = await supabase.auth.refreshSession(currentSession);
-          if (refreshError) {
-            console.warn('Failed to refresh admin session:', refreshError);
-            // Session might be expired - admin will need to sign in again
-            // But user creation was successful, so we continue
-          }
-        }
-      } catch (error) {
-        console.warn('Error restoring admin session:', error);
-        // Don't throw - user was created successfully
-        // Admin will need to sign in again, but that's acceptable
-      }
-    }
-    
-    // Create user record in public.users table
-    const { error: userError } = await ((supabase.from('users') as any).insert({
-      id: authData.user.id,
-      email,
-      full_name: fullName,
-      role_id: (roleData as any).id,
-      is_active: true,
-      created_by: (await supabase.auth.getUser()).data.user?.id ?? null,
-    }) as any);
-    
-    if (userError) {
-      // If user record creation fails, check if it's a duplicate (user already exists)
-      if ((userError as any).code === '23505') {
-        // Unique constraint violation - user record might already exist
-        // This is okay, the trigger might have created it
-        console.warn('User record may already exist, continuing...');
+    let message =
+      (typeof data.error === 'string' ? data.error : data.error?.message) ?? null;
+    if (!message) {
+      if (response.status === 404) {
+        message = 'Create-user Edge Function not found. Deploy it with: supabase functions deploy create-user';
+      } else if (response.status === 401) {
+        message = 'Session expired or invalid. Please sign in again.';
       } else {
-        // Other error - log it
-        console.error('Failed to create user record:', userError);
-        
-        // Try to use the self-registration function as fallback
-        const { error: fallbackError } = await (supabase.rpc('create_my_user_record') as any);
-        if (fallbackError) {
-          throw new Error(`Failed to create user record: ${(userError as any).message ?? 'Unknown error'}. The user was created in authentication but the database record creation failed.`);
-        }
+        message = 'User creation failed. Try again or contact your administrator.';
       }
     }
-    
-    return {
-      userId: authData.user.id,
-      email,
-      password, // Return the password so admin can share it with the user
-    };
+    throw new Error(message);
   } catch (error) {
     return {
       userId: '',

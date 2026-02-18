@@ -1,6 +1,6 @@
 {
   "name": "Ezyy ERP",
-  "short_name": "Ezyy",
+  "short_name": "ERP",
   "description": "Enterprise task management and project tracking system",
   "start_url": "/dashboard",
   "scope": "/",

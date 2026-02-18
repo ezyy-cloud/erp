@@ -170,23 +170,17 @@ To send onboarding and in-app notification emails via [Resend](https://resend.co
 
 ### Database Webhook: Notifications → Email
 
-To send an email for every new in-app notification, configure a **Database Webhook** in the Supabase Dashboard:
+The webhook that invokes `send-notification-email` on every INSERT into `notifications` is **created programmatically** by migration `053_enable_notifications_realtime_and_email.sql`. It uses `pg_net` to POST the new row to the Edge Function asynchronously.
 
-1. Go to **Database → Webhooks** and click **Create a new webhook**.
-2. **Name**: e.g. `notifications-to-email`.
-3. **Table**: `public.notifications`.
-4. **Events**: enable **Insert**.
-5. **Type**: **Supabase Edge Functions**.
-6. **Edge Function**: select **send-notification-email** (deploy it first with `supabase functions deploy send-notification-email`).
-7. **HTTP Headers**: Add header `Authorization` with value `Bearer <SUPABASE_SERVICE_ROLE_KEY>` (your project’s service role key from Settings → API). The Edge Function validates this to ensure only the webhook can invoke it.
+**No manual Dashboard setup is required.** After running `supabase db push`, every INSERT into `notifications` will trigger the Edge Function automatically.
 
-After saving, every INSERT into `notifications` will trigger a POST to `send-notification-email` with the new row in the payload, and the function will send the corresponding email via Resend.
+**Optional (not recommended):** You can also create a Database Webhook manually in Supabase Dashboard → Database → Webhooks. Do **not** do both—the migration trigger and a Dashboard webhook would both fire, causing duplicate emails. If you use a different Supabase project (e.g. staging), update the URL in the migration before applying.
 
-**Note:** The function accepts webhook calls with or without an `Authorization: Bearer <service_role_key>` header. If you don't add the header in the webhook config, it will still work as long as the payload is a valid Supabase INSERT webhook for `notifications`.
+
 
 ### Resend notifications not arriving
 
-1. **Webhook configured?** In Supabase Dashboard → Database → Webhooks, confirm a webhook exists for table `public.notifications`, event **Insert**, targeting the `send-notification-email` Edge Function.
+1. **Migration applied?** Ensure migration `053_enable_notifications_realtime_and_email.sql` has been applied (`supabase db push`). It creates a trigger that invokes the Edge Function on every `notifications` INSERT.
 2. **Secrets set?** Run `supabase secrets list` and ensure `RESEND_API_KEY` is set. Redeploy the function after setting secrets: `supabase functions deploy send-notification-email`.
 3. **Resend "from" domain:** To send to arbitrary recipient emails you must verify your own domain in Resend and set `RESEND_FROM_EMAIL` to an address on that domain (e.g. `notifications@yourdomain.com`). The default `onboarding@resend.dev` / `notifications@resend.dev` is for testing and may only deliver to your Resend account email.
 4. **Edge Function logs:** In Supabase Dashboard → Edge Functions → `send-notification-email` → Logs, look for lines like `send-notification-email: processing`, `send-notification-email: sent`, or `send-notification-email: skipped – ...` to see whether the webhook is firing and why emails might be skipped.

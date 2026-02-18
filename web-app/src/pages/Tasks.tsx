@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase/client';
 import type { Project, UserWithRole } from '@/lib/supabase/types';
 import { TaskStatus, TaskPriority } from '@/lib/supabase/types';
 import { useRealtimeTasks, type TaskFilters, type TaskWithRelations } from '@/hooks/useRealtimeTasks';
+import { useLatestTaskComments } from '@/hooks/useLatestTaskComments';
 import { highlightText } from '@/lib/utils/textHighlight';
 
 type AppUser = UserWithRole;
@@ -35,7 +36,15 @@ const getUserInitials = (user: UserWithRole | null | undefined): string => {
 };
 
 // Memoized task list item component
-const TaskListItem = memo(({ task, searchQuery }: { task: TaskWithRelations; searchQuery?: string }) => {
+const TaskListItem = memo(({
+  task,
+  searchQuery,
+  latestComment,
+}: {
+  task: TaskWithRelations;
+  searchQuery?: string;
+  latestComment?: { content: string; user?: { full_name: string | null; email: string } | null; created_at: string };
+}) => {
   const priorityDisplay = getPriorityDisplay(task.priority);
   const statusDisplay = getTaskStatusDisplay(
     (task as any).task_status, // Use canonical task_status field
@@ -89,6 +98,16 @@ const TaskListItem = memo(({ task, searchQuery }: { task: TaskWithRelations; sea
           </div>
         </CardHeader>
         <CardContent className="p-4 sm:p-6 pt-0">
+          {latestComment && (
+            <div className="text-xs text-muted-foreground mb-3 pb-3 border-b">
+              <span className="font-medium text-foreground/80">Latest comment: </span>
+              <span className="line-clamp-1">{latestComment.content}</span>
+              <span className="block mt-0.5 text-[10px]">
+                — {(latestComment.user?.full_name ?? latestComment.user?.email ?? 'Unknown')},{' '}
+                {new Date(latestComment.created_at).toLocaleDateString()}
+              </span>
+            </div>
+          )}
           <p className="text-sm text-muted-foreground line-clamp-2 mb-4 break-words">
             {highlightText(task.description ?? 'No description', searchQuery)}
           </p>
@@ -273,6 +292,12 @@ export function Tasks() {
       return false;
     });
   }, [allTasks, debouncedSearchQuery]);
+
+  const pageTaskIds = useMemo(
+    () => tasks.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((t) => t.id),
+    [tasks, currentPage, pageSize]
+  );
+  const latestCommentsByTask = useLatestTaskComments(pageTaskIds);
 
   // Set action button in top bar
   useEffect(() => {
@@ -775,7 +800,12 @@ export function Tasks() {
             {tasks
               .slice((currentPage - 1) * pageSize, currentPage * pageSize)
               .map((task) => (
-                <TaskListItem key={task.id} task={task} searchQuery={debouncedSearchQuery} />
+                <TaskListItem
+                  key={task.id}
+                  task={task}
+                  searchQuery={debouncedSearchQuery}
+                  latestComment={latestCommentsByTask.get(task.id)}
+                />
               ))}
           </div>
           {tasks.length > pageSize && (

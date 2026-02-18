@@ -30,7 +30,7 @@ export function useRealtimeTaskComments(taskId: string) {
         .from('task_comments')
         .select('*')
         .eq('task_id', taskId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
 
@@ -94,16 +94,15 @@ export function useRealtimeTaskComments(taskId: string) {
                 .single();
 
               setComments((prev) => {
-                // Check if comment already exists (avoid duplicates)
                 if (prev.some((c) => c.id === newComment.id)) {
                   return prev;
                 }
                 return [
-                  ...prev,
                   {
                     ...newComment,
                     user: userData ?? null,
                   } as any,
+                  ...prev,
                 ];
               });
             } else {
@@ -111,7 +110,7 @@ export function useRealtimeTaskComments(taskId: string) {
                 if (prev.some((c) => c.id === newComment.id)) {
                   return prev;
                 }
-                return [...prev, { ...newComment, user: null } as any];
+                return [{ ...newComment, user: null } as any, ...prev];
               });
             }
           } else if (payload.eventType === 'UPDATE') {

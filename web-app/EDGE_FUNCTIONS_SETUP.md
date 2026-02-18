@@ -182,7 +182,7 @@ The webhook that invokes `send-notification-email` on every INSERT into `notific
 
 1. **Migration applied?** Ensure migration `053_enable_notifications_realtime_and_email.sql` has been applied (`supabase db push`). It creates a trigger that invokes the Edge Function on every `notifications` INSERT.
 2. **Secrets set?** Run `supabase secrets list` and ensure `RESEND_API_KEY` is set. Redeploy the function after setting secrets: `supabase functions deploy send-notification-email`.
-3. **Resend "from" domain:** To send to arbitrary recipient emails you must verify your own domain in Resend and set `RESEND_FROM_EMAIL` to an address on that domain (e.g. `notifications@yourdomain.com`). The default `onboarding@resend.dev` / `notifications@resend.dev` is for testing and may only deliver to your Resend account email.
+3. **Resend "from" domain / 403 "domain is not verified":** To send to arbitrary recipient emails you must verify your own domain in Resend. If logs show `Resend API failed` with status 403 and "domain is not verified", add and verify your domain at [resend.com/domains](https://resend.com/domains), then set `RESEND_FROM_EMAIL` to an address on that domain (e.g. `notifications@ezyy.cloud`). The default `notifications@resend.dev` only delivers to your Resend account email. Redeploy after setting the secret.
 4. **Edge Function logs:** In Supabase Dashboard → Edge Functions → `send-notification-email` → Logs, look for lines like `send-notification-email: processing`, `send-notification-email: sent`, or `send-notification-email: skipped – ...` to see whether the webhook is firing and why emails might be skipped.
 5. **Resend dashboard:** In resend.com → Emails, check for sent/failed/delivered status and any error messages.
 

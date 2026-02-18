@@ -7,6 +7,7 @@ import { ProjectStatus as ProjectStatusEnum } from '@/lib/supabase/types';
 import { useRealtimeProjects } from '@/hooks/useRealtimeProjects';
 import { useRealtimeTasks } from '@/hooks/useRealtimeTasks';
 import { useRealtimeProjectMembers } from '@/hooks/useRealtimeProjectMembers';
+import { useLatestTaskComments } from '@/hooks/useLatestTaskComments';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -45,6 +46,9 @@ export function ProjectDetail() {
   const taskFilters = useMemo(() => (id ? { projectId: id } : undefined), [id]);
   const { tasks: taskList, loading: tasksLoading } = useRealtimeTasks(taskFilters);
   const tasks = taskList.map((t) => t as Task);
+
+  const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
+  const latestCommentsByTask = useLatestTaskComments(taskIds);
 
   const assignedUsers = useMemo(() => {
     const userMap = new Map<string, UserWithRole>();
@@ -389,6 +393,7 @@ export function ProjectDetail() {
                     const PriorityIcon = priorityDisplay.icon;
                     const taskIsClosed = isTaskClosed(task);
                     const closedByProject = (task as any).closed_reason === 'project_closed';
+                    const latestComment = latestCommentsByTask.get(task.id);
 
                     return (
                       <Link
@@ -411,6 +416,11 @@ export function ProjectDetail() {
                               }`}>
                                 {task.title}
                               </h4>
+                              {latestComment && (
+                                <p className="text-xs text-muted-foreground break-words mt-1 line-clamp-1">
+                                  Latest: {latestComment.content}
+                                </p>
+                              )}
                               {task.description && (
                                 <p className="text-xs text-muted-foreground break-words mt-1">
                                   {task.description}

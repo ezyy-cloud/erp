@@ -4,13 +4,13 @@ import { usePage } from '@/contexts/PageContext';
 import { useNavigate } from 'react-router-dom';
 import { 
   createUser, 
-  getAllUsers, 
   toggleUserStatus, 
   updateUser,
   resetUserPassword,
   type CreateUserResult,
   type ResetPasswordResult 
 } from '@/lib/services/userService';
+import { useRealtimeUsers } from '@/hooks/useRealtimeUsers';
 import { getUserTaskCounts, type UserTaskCounts } from '@/lib/services/userPerformanceService';
 import type { UserWithRole } from '@/lib/supabase/types';
 import { UserRole } from '@/lib/supabase/types';
@@ -332,8 +332,7 @@ export function Users() {
   const { permissions } = useAuth();
   const { setActionButton } = usePage();
   const navigate = useNavigate();
-  const [users, setUsers] = useState<UserWithRole[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { users, loading, error: fetchError, refetch } = useRealtimeUsers(permissions.canViewAllUsers ?? false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(12); // 3 columns × 4 rows = 12 cards per page
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -399,12 +398,6 @@ export function Users() {
     return () => setActionButton(null);
   }, [permissions.canViewAllUsers, showCreateForm, setActionButton]);
 
-  useEffect(() => {
-    if (permissions.canViewAllUsers) {
-      fetchUsers();
-    }
-  }, [permissions.canViewAllUsers]);
-
   // Fetch task counts for all users
   useEffect(() => {
     if (users.length > 0 && permissions.canViewAllUsers) {
@@ -416,35 +409,15 @@ export function Users() {
     const newCounts = new Map<string, UserTaskCounts>();
 
     // Fetch counts for all users in parallel
-    const countPromises = users.map(async (user) => {
-      const { data, error } = await getUserTaskCounts(user.id);
-      if (!error && data) {
-        newCounts.set(user.id, data);
+    const countPromises = users.map(async (u) => {
+      const { data, error: countError } = await getUserTaskCounts(u.id);
+      if (!countError && data) {
+        newCounts.set(u.id, data);
       }
     });
 
     await Promise.all(countPromises);
     setUserTaskCounts(newCounts);
-  };
-
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getAllUsers();
-      setUsers((data as UserWithRole[]) ?? []);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load users';
-      setError(`Failed to load users: ${errorMessage}`);
-      
-      // If it's an RLS/permission error, provide helpful message
-      if (errorMessage.includes('permission') || errorMessage.includes('policy') || errorMessage.includes('403')) {
-        setError('Permission denied. Please ensure your role is set correctly and RLS policies are configured.');
-      }
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -481,7 +454,7 @@ export function Users() {
       
       // Refresh user list - the new user will be included
       // We do a full refresh here since we don't have the full user object from createUser
-      await fetchUsers();
+      await refetch();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create user');
     } finally {
@@ -491,25 +464,13 @@ export function Users() {
 
   const handleStatusToggle = async (userId: string, currentStatus: boolean) => {
     const newStatus = !currentStatus;
-    
-    // Optimistic update: Update status immediately
-    setUsers((prev) =>
-      prev.map((user) => {
-        if (user.id === userId) {
-          return { ...user, is_active: newStatus };
-        }
-        return user;
-      })
-    );
 
     try {
       await toggleUserStatus(userId, newStatus);
-      // Refresh in background to ensure consistency
-      fetchUsers().catch(console.error);
-    } catch (error) {
-      console.error('Error updating user status:', error);
-      // Revert on error
-      fetchUsers();
+      refetch().catch(console.error);
+    } catch (err) {
+      console.error('Error updating user status:', err);
+      refetch();
       alert('Failed to update user status');
     }
   };
@@ -548,26 +509,9 @@ export function Users() {
         return;
       }
 
-      // Optimistic update: Update user immediately
-      setUsers((prev) =>
-        prev.map((user) => {
-          if (user.id === editingUserId) {
-            return {
-              ...user,
-              email: editFormData.email,
-              full_name: editFormData.fullName,
-              roles: { name: editFormData.role, description: '' } as any,
-            };
-          }
-          return user;
-        })
-      );
-
       setEditingUserId(null);
       setEditFormData(null);
-      
-      // Refresh in background to ensure consistency
-      fetchUsers().catch(console.error);
+      refetch().catch(console.error);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update user');
     }
@@ -641,7 +585,11 @@ export function Users() {
 
   return (
     <div className="space-y-4 md:space-y-6 w-full max-w-full overflow-x-hidden">
-
+      {fetchError && (
+        <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
+          {fetchError.message}
+        </div>
+      )}
       {createdCredentials && (
         <Card className="border-2 border-primary">
           <CardHeader>
@@ -859,7 +807,7 @@ export function Users() {
                   onSaveEdit={handleSaveEdit}
                   onStatusToggle={handleStatusToggle}
                   onResetPassword={handleResetPassword}
-                  onUserDeleted={fetchUsers}
+                  onUserDeleted={() => refetch()}
                   onViewPerformance={handleViewPerformance}
                   setEditFormData={setEditFormData}
                 />

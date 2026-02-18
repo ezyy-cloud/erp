@@ -2,11 +2,11 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePage } from '@/contexts/PageContext';
-import { supabase } from '@/lib/supabase/client';
 import type { Task, UserWithRole, ProjectStatus } from '@/lib/supabase/types';
 import { ProjectStatus as ProjectStatusEnum } from '@/lib/supabase/types';
 import { useRealtimeProjects } from '@/hooks/useRealtimeProjects';
 import { useRealtimeTasks } from '@/hooks/useRealtimeTasks';
+import { useRealtimeProjectMembers } from '@/hooks/useRealtimeProjectMembers';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -26,8 +26,7 @@ export function ProjectDetail() {
   const navigate = useNavigate();
   const { permissions, user } = useAuth();
   const { setBackButton, setActionButton } = usePage();
-  const [members, setMembers] = useState<UserWithRole[]>([]);
-  const [assignedUsers, setAssignedUsers] = useState<UserWithRole[]>([]);
+  const { members, loading: membersLoading } = useRealtimeProjectMembers(id);
   const [isEditing, setIsEditing] = useState(false);
   const [editFormData, setEditFormData] = useState({
     name: '',
@@ -46,15 +45,23 @@ export function ProjectDetail() {
   const taskFilters = useMemo(() => (id ? { projectId: id } : undefined), [id]);
   const { tasks: taskList, loading: tasksLoading } = useRealtimeTasks(taskFilters);
   const tasks = taskList.map((t) => t as Task);
-  
-  const loading = projectsLoading || tasksLoading;
 
-  useEffect(() => {
-    if (id) {
-      fetchMembers();
-      fetchAssignedUsers();
+  const assignedUsers = useMemo(() => {
+    const userMap = new Map<string, UserWithRole>();
+    for (const t of taskList) {
+      if ((t as any).assigned_user) {
+        userMap.set((t as any).assigned_user.id, (t as any).assigned_user);
+      }
+      for (const a of (t as any).assignees ?? []) {
+        if (a.user) {
+          userMap.set(a.user.id, a.user);
+        }
+      }
     }
-  }, [id]);
+    return Array.from(userMap.values());
+  }, [taskList]);
+  
+  const loading = projectsLoading || tasksLoading || membersLoading;
 
   useEffect(() => {
     if (project) {
@@ -82,103 +89,6 @@ export function ProjectDetail() {
       setBackButton(null);
     };
   }, [navigate, setBackButton]);
-
-  const fetchMembers = async () => {
-    if (!id) return;
-    try {
-      // Fetch project members first (without join since user_id references auth.users, not public.users)
-      const { data: membersData, error: membersError } = await supabase
-        .from('project_members')
-        .select('*')
-        .eq('project_id', id);
-
-      if (membersError) throw membersError;
-
-      if (membersData && membersData.length > 0) {
-        // Extract user IDs and fetch users separately from public.users
-        const userIds = [...new Set(membersData.map((m: any) => m.user_id).filter(Boolean))];
-        
-        const { data: usersData, error: usersError } = userIds.length > 0
-          ? await supabase.from('users').select('*').in('id', userIds)
-          : { data: [], error: null };
-
-        if (usersError) throw usersError;
-
-        const usersMap = new Map((usersData as any)?.map((u: any) => [u.id, u]) ?? []);
-
-        // Combine members with user data
-        const membersWithUsers = membersData.map((member: any) => {
-          const user = usersMap.get(member.user_id);
-          return {
-            ...member,
-            user: user ?? null,
-          };
-        });
-
-        setMembers(membersWithUsers as any);
-      } else {
-        setMembers([]);
-      }
-    } catch (error) {
-      console.error('Error fetching members:', error);
-    }
-  };
-
-  const fetchAssignedUsers = async () => {
-    if (!id) return;
-    try {
-      // Get all tasks for this project
-      const { data: tasksData, error: tasksError } = await supabase
-        .from('tasks')
-        .select('assigned_to')
-        .eq('project_id', id)
-        .not('assigned_to', 'is', null);
-
-      if (tasksError) throw tasksError;
-
-      if (tasksData && tasksData.length > 0) {
-        // Get unique user IDs from assigned_to
-        const userIds = [...new Set(tasksData.map((t: any) => t.assigned_to).filter(Boolean))];
-        
-        if (userIds.length > 0) {
-          // Fetch user details
-          const { data: usersData, error: usersError } = await supabase
-            .from('users')
-            .select('*')
-            .in('id', userIds);
-
-          if (usersError) throw usersError;
-
-          // Fetch roles for each user
-          if (usersData && usersData.length > 0) {
-            const usersWithRoles = await Promise.all(
-              usersData.map(async (user: any) => {
-                if (user.role_id) {
-                  const { data: roleData } = await supabase
-                    .from('roles')
-                    .select('*')
-                    .eq('id', user.role_id)
-                    .single();
-                  return { ...user, roles: roleData ?? undefined } as UserWithRole;
-                }
-                return { ...user } as UserWithRole;
-              })
-            );
-            setAssignedUsers(usersWithRoles);
-          } else {
-            setAssignedUsers([]);
-          }
-        } else {
-          setAssignedUsers([]);
-        }
-      } else {
-        setAssignedUsers([]);
-      }
-    } catch (error) {
-      console.error('Error fetching assigned users:', error);
-      setAssignedUsers([]);
-    }
-  };
 
   const handleEdit = useCallback(() => {
     setIsEditing(true);

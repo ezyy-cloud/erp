@@ -223,7 +223,7 @@ export function Tasks() {
   }, [searchParams, activeTab]);
 
   // Use real-time tasks hook (without search query to avoid re-fetching)
-  const { tasks: allTasks, loading } = useRealtimeTasks(taskFilters);
+  const { tasks: allTasks, loading, refetch: refetchTasks } = useRealtimeTasks(taskFilters);
 
   // Apply client-side search filtering
   const tasks = useMemo(() => {
@@ -473,7 +473,7 @@ export function Tasks() {
       });
       setSelectedFiles([]);
       setShowCreateForm(false);
-      // Tasks will update automatically via real-time subscription
+      refetchTasks();
     } catch (error) {
       console.error('Error creating task:', error);
       alert('Failed to create task');

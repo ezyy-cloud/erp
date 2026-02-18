@@ -6,9 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { CheckCircle, Circle, Edit2, Trash2 } from 'lucide-react';
-import { listBulletins, createBulletin, updateBulletin, deleteBulletin } from '@/lib/services/bulletinService';
+import { createBulletin, updateBulletin, deleteBulletin } from '@/lib/services/bulletinService';
 import {
-  listTodosWithAssigneesAndCompletions,
   createTodoWithAssignees,
   updateTodo,
   deleteTodo,
@@ -18,6 +17,8 @@ import {
 import type { BulletinWithCreator } from '@/lib/services/bulletinService';
 import type { User } from '@/lib/supabase/types';
 import { supabase } from '@/lib/supabase/client';
+import { useRealtimeBulletins } from '@/hooks/useRealtimeBulletins';
+import { useRealtimeTodos } from '@/hooks/useRealtimeTodos';
 
 interface BulletinFormState {
   id?: string;
@@ -34,10 +35,10 @@ interface TodoFormState {
 
 export function TodoNotices() {
   const { permissions, user } = useAuth();
-  const [bulletins, setBulletins] = useState<BulletinWithCreator[]>([]);
-  const [todos, setTodos] = useState<TodoWithRelations[]>([]);
+  const { bulletins, loading: bulletinsLoading, refetch: refetchBulletins } = useRealtimeBulletins();
+  const { todos, loading: todosLoading, refetch: refetchTodos } = useRealtimeTodos();
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const loading = bulletinsLoading || todosLoading;
   const [savingBulletin, setSavingBulletin] = useState(false);
   const [savingTodo, setSavingTodo] = useState(false);
   const [bulletinForm, setBulletinForm] = useState<BulletinFormState>({
@@ -59,42 +60,16 @@ export function TodoNotices() {
 
   useEffect(() => {
     let isMounted = true;
-
-    async function fetchData() {
-      setLoading(true);
-      try {
-        const [bulletinResult, todoResult, usersResult] = await Promise.all([
-          listBulletins(),
-          listTodosWithAssigneesAndCompletions(),
-          supabase
-            .from('users')
-            .select('*')
-            .is('deleted_at', null)
-            .eq('is_active', true),
-        ]);
-
-        if (!isMounted) return;
-
-        if (!bulletinResult.error && bulletinResult.data) {
-          setBulletins(bulletinResult.data);
+    supabase
+      .from('users')
+      .select('*')
+      .is('deleted_at', null)
+      .eq('is_active', true)
+      .then(({ data, error }) => {
+        if (isMounted && !error && data) {
+          setUsers(data as User[]);
         }
-
-        if (!todoResult.error && todoResult.data) {
-          setTodos(todoResult.data);
-        }
-
-        if (!usersResult.error && usersResult.data) {
-          setUsers(usersResult.data as User[]);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchData();
-
+      });
     return () => {
       isMounted = false;
     };
@@ -155,12 +130,9 @@ export function TodoNotices() {
         }
       }
 
-      const refreshed = await listBulletins();
-      if (!refreshed.error && refreshed.data) {
-        setBulletins(refreshed.data);
-      }
       resetBulletinForm();
       setShowBulletinForm(false);
+      refetchBulletins();
     } finally {
       setSavingBulletin(false);
     }
@@ -185,14 +157,11 @@ export function TodoNotices() {
       console.error('Failed to delete bulletin', error);
       return;
     }
-    const refreshed = await listBulletins();
-    if (!refreshed.error && refreshed.data) {
-      setBulletins(refreshed.data);
-    }
     if (editingBulletinId === id) {
       resetBulletinForm();
       setShowBulletinForm(false);
     }
+    refetchBulletins();
   };
 
   const handleTodoSubmit = async (event: React.FormEvent) => {
@@ -226,12 +195,9 @@ export function TodoNotices() {
         }
       }
 
-      const refreshed = await listTodosWithAssigneesAndCompletions();
-      if (!refreshed.error && refreshed.data) {
-        setTodos(refreshed.data);
-      }
       resetTodoForm();
       setShowTodoForm(false);
+      refetchTodos();
     } finally {
       setSavingTodo(false);
     }
@@ -255,14 +221,11 @@ export function TodoNotices() {
       console.error('Failed to delete todo', error);
       return;
     }
-    const refreshed = await listTodosWithAssigneesAndCompletions();
-    if (!refreshed.error && refreshed.data) {
-      setTodos(refreshed.data);
-    }
     if (editingTodoId === id) {
       resetTodoForm();
       setShowTodoForm(false);
     }
+    refetchTodos();
   };
 
   const handleToggleCompletion = async (todoId: string) => {
@@ -273,10 +236,7 @@ export function TodoNotices() {
       console.error('Failed to toggle completion', error);
       return;
     }
-    const refreshed = await listTodosWithAssigneesAndCompletions();
-    if (!refreshed.error && refreshed.data) {
-      setTodos(refreshed.data);
-    }
+    refetchTodos();
   };
 
   const assigneeOptions = useMemo(

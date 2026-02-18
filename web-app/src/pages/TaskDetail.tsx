@@ -25,9 +25,9 @@ import { EditTaskForm } from '@/components/tasks/EditTaskForm';
 import { EditRequestReview } from '@/components/tasks/EditRequestReview';
 import { TaskStatusModal, type TaskStatusAction } from '@/components/tasks/TaskStatusModal';
 import { getTaskAssignees } from '@/lib/services/taskAssignmentService';
-import { getEditRequests } from '@/lib/services/taskEditRequestService';
 import { softDeleteTask } from '@/lib/services/taskDeletionService';
-import type { TaskEditRequest } from '@/lib/supabase/types';
+import { useRealtimeTaskEditRequests } from '@/hooks/useRealtimeTaskEditRequests';
+import { useRealtime } from '@/contexts/RealtimeContext';
 
 export function TaskDetail() {
   const { id } = useParams<{ id: string }>();
@@ -45,7 +45,7 @@ export function TaskDetail() {
   const [loadingReview, setLoadingReview] = useState(false);
   const [showEditRequestForm, setShowEditRequestForm] = useState(false);
   const [showEditTaskForm, setShowEditTaskForm] = useState(false);
-  const [pendingEditRequest, setPendingEditRequest] = useState<TaskEditRequest | null>(null);
+  const { pendingEditRequest, refetch: refetchEditRequests } = useRealtimeTaskEditRequests(id ?? undefined);
   const [taskAssignees, setTaskAssignees] = useState<UserWithRole[]>([]);
   const [isUserAssignedToTask, setIsUserAssignedToTask] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -56,79 +56,55 @@ export function TaskDetail() {
   // Fetch single task with real-time updates
   const [task, setTask] = useState<Task | null>(null);
   const [taskLoading, setTaskLoading] = useState(true);
-  
-  useEffect(() => {
-    if (!id) {
-      setTaskLoading(false);
-      return;
-    }
-    
-    // Initial fetch
+  const { subscribe, isConnected } = useRealtime();
+
+  const refetchTask = useCallback(() => {
+    if (!id) return;
     supabase
       .from('tasks')
-      .select(`
-        *,
-        projects!left (*)
-      `)
+      .select(`*, projects!left (*)`)
       .eq('id', id)
       .single()
       .then(({ data, error }) => {
         if (error) {
           console.error('Error fetching task:', error);
-          setTaskLoading(false);
           return;
         }
         setTask(data);
-        setTaskLoading(false);
       });
-    
-    // Subscribe to task updates
-    const channel = supabase
-      .channel(`task:${id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tasks',
-          filter: `id=eq.${id}`,
-        },
-        (payload) => {
-          if (payload.eventType === 'UPDATE') {
-            // Merge payload directly instead of refetching
-            setTask((prev) => {
-              if (!prev) return prev;
-              return {
-                ...prev,
-                ...payload.new,
-              } as Task;
-            });
-          } else if (payload.eventType === 'INSERT') {
-            // For INSERT, we still need to fetch with relations
-            supabase
-              .from('tasks')
-              .select(`
-                *,
-                projects!left (*)
-              `)
-              .eq('id', id)
-              .single()
-              .then(({ data }) => {
-                if (data) {
-                  setTask(data);
-                }
-              });
-          } else if (payload.eventType === 'DELETE') {
-            setTask(null);
-          }
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [id]);
+
+  useEffect(() => {
+    if (!id) {
+      setTaskLoading(false);
+      return;
+    }
+
+    refetchTask();
+
+    if (!isConnected) return;
+
+    const unsubscribe = subscribe(`task:${id}`, {
+      event: '*',
+      schema: 'public',
+      table: 'tasks',
+      filter: `id=eq.${id}`,
+      callback: (payload) => {
+        if (payload.eventType === 'UPDATE') {
+          setTask((prev) => {
+            if (!prev) return prev;
+            return { ...prev, ...payload.new } as Task;
+          });
+        } else if (payload.eventType === 'INSERT') {
+          refetchTask();
+        } else if (payload.eventType === 'DELETE') {
+          setTask(null);
+        }
+      },
+    });
+
+    return () => unsubscribe();
+  }, [id, isConnected, subscribe, refetchTask]);
 
   // Set back button in top nav
   useEffect(() => {
@@ -148,9 +124,9 @@ export function TaskDetail() {
   }, [navigate, setBackButton]);
   
   // Use real-time hooks for comments, notes, and files
-  const { comments, loading: commentsLoading } = useRealtimeTaskComments(id ?? '');
-  const { notes, loading: notesLoading } = useRealtimeTaskNotes(id ?? '');
-  const { files, loading: filesLoading } = useRealtimeTaskFiles(id ?? '');
+  const { comments, loading: commentsLoading, refetch: refetchComments } = useRealtimeTaskComments(id ?? '');
+  const { notes, loading: notesLoading, refetch: refetchNotes } = useRealtimeTaskNotes(id ?? '');
+  const { files, loading: filesLoading, refetch: refetchFiles } = useRealtimeTaskFiles(id ?? '');
   
   // Combine all loading states
   const loading = taskLoading || commentsLoading || notesLoading || filesLoading;
@@ -291,64 +267,39 @@ export function TaskDetail() {
     }
   }, [task, comments, notes, files, id, assigneeIdsString]);
 
-  // Fetch pending edit requests
-  useEffect(() => {
-    if (!id) return;
-    
-    const fetchPendingRequests = async () => {
-      const { data, error } = await getEditRequests(id);
-      if (!error && data) {
-        const pending = data.find(req => req.status === 'pending');
-        setPendingEditRequest(pending ?? null);
-      }
-    };
-    
-    fetchPendingRequests();
-  }, [id, task?.review_status]);
-
-  // Fetch task assignees and check if user is assigned
-  useEffect(() => {
+  // Fetch task assignees and subscribe to real-time updates
+  const fetchAssignees = useCallback(async () => {
     if (!id || !user) return;
-    
-    const fetchAssignees = async () => {
-      const { data, error } = await getTaskAssignees(id);
-      if (!error && data) {
-        // Extract full user objects from assignees
-        const assigneeUsers = data
-          .map(a => a.user)
-          .filter((u): u is UserWithRole => u !== null && u !== undefined);
-        setTaskAssignees(assigneeUsers);
-        setIsUserAssignedToTask(assigneeUsers.some(a => a.id === user.id));
-      } else {
-        setTaskAssignees([]);
-        setIsUserAssignedToTask(false);
-      }
-    };
-    
-    fetchAssignees();
-    
-    // Subscribe to task_assignees changes for real-time updates
-    const channel = supabase
-      .channel(`task_assignees:${id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'task_assignees',
-          filter: `task_id=eq.${id}`,
-        },
-        () => {
-          // Refetch assignees when changes occur
-          fetchAssignees();
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const { data, error } = await getTaskAssignees(id);
+    if (!error && data) {
+      const assigneeUsers = data
+        .map((a) => a.user)
+        .filter((u): u is UserWithRole => u !== null && u !== undefined);
+      setTaskAssignees(assigneeUsers);
+      setIsUserAssignedToTask(assigneeUsers.some((a) => a.id === user.id));
+    } else {
+      setTaskAssignees([]);
+      setIsUserAssignedToTask(false);
+    }
   }, [id, user]);
+
+  useEffect(() => {
+    if (!id || !user || !isConnected) return;
+
+    fetchAssignees();
+
+    const unsubscribe = subscribe(`task_assignees:${id}`, {
+      event: '*',
+      schema: 'public',
+      table: 'task_assignees',
+      filter: `task_id=eq.${id}`,
+      callback: () => {
+        fetchAssignees();
+      },
+    });
+
+    return () => unsubscribe();
+  }, [id, user, isConnected, fetchAssignees, subscribe]);
 
   const handleAddComment = async () => {
     if (!id || !newComment.trim() || !user) return;
@@ -367,7 +318,7 @@ export function TaskDetail() {
       }
 
       setNewComment('');
-      // Comments will update automatically via real-time subscription
+      refetchComments();
     } catch (error: any) {
       console.error('Error adding comment:', error);
       alert(`Failed to add comment: ${error?.message ?? 'Unknown error'}`);
@@ -390,7 +341,7 @@ export function TaskDetail() {
         return;
       }
 
-      // Comments will update automatically via real-time subscription
+      refetchComments();
     } catch (error: any) {
       console.error('Error deleting comment:', error);
       alert(`Failed to delete comment: ${error?.message ?? 'Unknown error'}`);
@@ -409,7 +360,7 @@ export function TaskDetail() {
 
       if (error) throw error;
       setNewNote('');
-      // Notes will update automatically via real-time subscription
+      refetchNotes();
     } catch (error) {
       console.error('Error adding note:', error);
       alert('Failed to add note');
@@ -447,7 +398,7 @@ export function TaskDetail() {
       if (dbError) throw dbError;
 
       setSelectedFile(null);
-      // Files will update automatically via real-time subscription
+      refetchFiles();
     } catch (error) {
       console.error('Error uploading file:', error);
       alert('Failed to upload file');
@@ -475,7 +426,7 @@ export function TaskDetail() {
       }
 
       setStatusModalOpen(false);
-      // Task will update automatically via real-time subscription
+      refetchTask();
     } catch (error: any) {
       console.error('Error changing task status:', error);
       alert(`Failed to change task status: ${error?.message ?? 'Unknown error'}`);
@@ -502,7 +453,7 @@ export function TaskDetail() {
       const { error } = await approveTask(id, user.id, reviewComment || undefined);
       if (error) throw error;
       setReviewComment('');
-      // Task will update automatically via real-time subscription
+      refetchTask();
       alert('Task approved successfully');
     } catch (error) {
       console.error('Error approving task:', error);
@@ -523,7 +474,7 @@ export function TaskDetail() {
       const { error } = await requestChanges(id, user.id, reviewComment);
       if (error) throw error;
       setReviewComment('');
-      // Task will update automatically via real-time subscription
+      refetchTask();
       alert('Changes requested');
     } catch (error) {
       console.error('Error requesting changes:', error);
@@ -793,15 +744,7 @@ export function TaskDetail() {
               onClose={() => setShowEditRequestForm(false)}
               onSuccess={() => {
                 setShowEditRequestForm(false);
-                // Refresh pending requests
-                if (id) {
-                  getEditRequests(id).then(({ data }) => {
-                    if (data) {
-                      const pending = data.find(req => req.status === 'pending');
-                      setPendingEditRequest(pending ?? null);
-                    }
-                  });
-                }
+                refetchEditRequests();
               }}
             />
           </CardContent>
@@ -813,18 +756,8 @@ export function TaskDetail() {
         <EditRequestReview
           request={{ ...pendingEditRequest, task }}
           onReviewed={() => {
-            setPendingEditRequest(null);
-            // Refresh task data
-            if (id) {
-              supabase
-                .from('tasks')
-                .select('*')
-                .eq('id', id)
-                .single()
-                .then(({ data }) => {
-                  if (data) setTask(data);
-                });
-            }
+            refetchEditRequests();
+            refetchTask();
           }}
         />
       )}
@@ -1304,11 +1237,11 @@ export function TaskDetail() {
                       
                       setLoadingReview(true);
                     const { error } = await unarchiveTask(id, user.id);
-                      
                       if (error) {
-                      alert(`Failed to reopen task: ${error.message}`);
+                        alert(`Failed to reopen task: ${error.message}`);
                       } else {
-                      alert('Task reopened successfully');
+                        alert('Task reopened successfully');
+                        refetchTask();
                       }
                       setLoadingReview(false);
                     }}

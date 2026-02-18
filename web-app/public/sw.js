@@ -1,4 +1,4 @@
-// Service Worker for Furbank ERP PWA
+// Service Worker for Ezyy ERP PWA
 // Version-based cache invalidation
 const CACHE_VERSION = 'v2';
 const APP_SHELL_CACHE = `app-shell-${CACHE_VERSION}`;

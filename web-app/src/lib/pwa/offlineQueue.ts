@@ -5,7 +5,7 @@
  * Retries queued operations when network is restored
  */
 
-const DB_NAME = 'furbank-offline-queue';
+const DB_NAME = 'ezyy-offline-queue';
 const DB_VERSION = 1;
 const STORE_NAME = 'operations';
 

@@ -1,12 +1,12 @@
 # Supabase CLI Configuration
 # This file configures the Supabase CLI for local development
 
-project_id = "zfvywfujvguzvlmlxfae"
+project_id = "gqyigihstsxligqmsrwc"
 
 [auth]
 enabled = true
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://localhost:3000"]
+site_url = "https://erp.ezyy.cloud"
+additional_redirect_urls = ["https://erp.ezyy.cloud", "https://erp.ezyy.cloud/**", "http://localhost:3000", "https://localhost:3000"]
 jwt_expiry = 3600
 enable_signup = true
 

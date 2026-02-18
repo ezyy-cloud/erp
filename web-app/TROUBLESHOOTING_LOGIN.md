@@ -8,13 +8,13 @@ This error occurs when the admin user doesn't exist in Supabase Auth or email co
 
 ### Step 1: Create Admin User in Supabase Auth
 
-1. Go to your Supabase Dashboard: https://supabase.com/dashboard/project/zfvywfujvguzvlmlxfae
+1. Go to your Supabase Dashboard: https://supabase.com/dashboard/project/gqyigihstsxligqmsrwc
 2. Navigate to **Authentication** > **Users**
 3. Click **"Add user"** button (top right)
 4. Select **"Create new user"**
 5. Fill in:
-   - **Email**: `admin@furbank.com`
-   - **Password**: `Admin@123`
+   - **Email**: `cloud.architect@ezyy.cloud`
+   - **Password**: (set in Dashboard)
    - **Auto Confirm User**: ✅ **YES** (This is critical!)
    - **Send invitation email**: ❌ No (optional)
 6. Click **"Create user"**
@@ -39,7 +39,7 @@ This error occurs when the admin user doesn't exist in Supabase Auth or email co
 
 1. Go to **Table Editor** > **users**
 2. You should see a user with:
-   - Email: `admin@furbank.com`
+   - Email: `cloud.architect@ezyy.cloud`
    - Full Name: `System Administrator`
    - Role: Should have `senior_consultant` role
 
@@ -47,8 +47,8 @@ This error occurs when the admin user doesn't exist in Supabase Auth or email co
 
 1. Go to your app: `http://localhost:5173/login`
 2. Enter:
-   - Email: `admin@furbank.com`
-   - Password: `Admin@123`
+   - Email: `cloud.architect@ezyy.cloud`
+   - Password: (set in Dashboard)
 3. Click **"Sign In"**
 
 ## Alternative: Check Existing Users
@@ -66,8 +66,8 @@ If you already created a user, you can:
 1. **Check browser console** for more detailed error messages
 2. **Verify environment variables** in `.env`:
    ```
-   VITE_SUPABASE_URL=https://zfvywfujvguzvlmlxfae.supabase.co
-   VITE_SUPABASE_ANON_KEY=sb_publishable_59EZ40FUmypHn3UCX1cUZQ_N1d9UOeK
+   VITE_SUPABASE_URL=https://gqyigihstsxligqmsrwc.supabase.co
+   VITE_SUPABASE_ANON_KEY=your_anon_key
    ```
 3. **Restart the dev server** after changing `.env`
 4. **Clear browser cache/localStorage** and try again

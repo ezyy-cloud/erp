@@ -20,11 +20,11 @@ BEGIN
   -- Find the admin user by email
   SELECT id INTO admin_user_id
   FROM auth.users
-  WHERE email = 'admin@furbank.com'
+  WHERE email = 'cloud.architect@ezyy.cloud'
   LIMIT 1;
 
   IF admin_user_id IS NULL THEN
-    RAISE WARNING 'Admin user (admin@furbank.com) not found in auth.users. Please create the user first.';
+    RAISE WARNING 'Admin user (cloud.architect@ezyy.cloud) not found in auth.users. Please create the user first.';
   ELSE
     -- Insert or update the admin user in public.users
     INSERT INTO public.users (
@@ -36,7 +36,7 @@ BEGIN
       created_by
     ) VALUES (
       admin_user_id,
-      'admin@furbank.com',
+      'cloud.architect@ezyy.cloud',
       'System Administrator',
       senior_consultant_role_id,
       true,
@@ -64,4 +64,4 @@ SELECT
   r.description as role_description
 FROM public.users u
 LEFT JOIN roles r ON u.role_id = r.id
-WHERE u.email = 'admin@furbank.com';
+WHERE u.email = 'cloud.architect@ezyy.cloud';

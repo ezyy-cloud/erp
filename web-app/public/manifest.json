@@ -1,6 +1,6 @@
 {
-  "name": "Furbank ERP",
-  "short_name": "Furbank",
+  "name": "Ezyy ERP",
+  "short_name": "Ezyy",
   "description": "Enterprise task management and project tracking system",
   "start_url": "/dashboard",
   "scope": "/",

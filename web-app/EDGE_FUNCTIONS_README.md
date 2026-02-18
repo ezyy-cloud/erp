@@ -39,8 +39,8 @@ supabase login
 ### 3. Link Project
 
 ```bash
-cd furbank-erp-web
-supabase link --project-ref zfvywfujvguzvlmlxfae
+cd web-app
+supabase link --project-ref gqyigihstsxligqmsrwc
 ```
 
 Enter your database password when prompted (found in Supabase Dashboard → Settings → Database).

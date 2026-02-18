@@ -1,4 +1,4 @@
-# Furbank ERP - Task Management System
+# Ezyy ERP - Task Management System
 
 A production-ready task management application designed to evolve incrementally into a full ERP system. Built with React, TypeScript, and Supabase.
 
@@ -34,7 +34,7 @@ A production-ready task management application designed to evolve incrementally 
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd furbank-erp/furbank-erp-web
+cd ezyy-erp/web-app
 ```
 
 2. Install dependencies:
@@ -61,8 +61,8 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
    - **Important**: Before running the seed migration, create the admin user in Supabase Auth:
      - Go to Authentication > Users
      - Click "Add user" > "Create new user"
-     - Email: `admin@furbank.com`
-     - Password: `Admin@123`
+     - Email: `cloud.architect@ezyy.cloud`
+     - Password: (set in Dashboard)
      - Auto Confirm User: Yes
      - Copy the user ID and update the seed script if needed
 

@@ -1,6 +1,6 @@
-# Setup Guide - Furbank ERP
+# Setup Guide - Ezyy ERP
 
-This guide will walk you through setting up the Furbank ERP application from scratch.
+This guide will walk you through setting up the Ezyy ERP application from scratch.
 
 ## Prerequisites
 
@@ -28,8 +28,8 @@ This guide will walk you through setting up the Furbank ERP application from scr
 1. **Create the admin user in Supabase Auth first**:
    - Go to **Authentication > Users** in Supabase Dashboard
    - Click **"Add user"** > **"Create new user"**
-   - Email: `admin@furbank.com`
-   - Password: `Admin@123`
+   - Email: `cloud.architect@ezyy.cloud`
+   - Password: (set in Dashboard)
    - **Auto Confirm User**: Yes (important!)
    - Click **"Create user"**
    - Note the user ID (you may need it)
@@ -79,8 +79,8 @@ The application will be available at `http://localhost:5173`
 
 1. Navigate to the login page at `http://localhost:5173/login`
 2. Sign in with the admin credentials:
-   - Email: `admin@furbank.com`
-   - Password: `Admin@123`
+   - Email: `cloud.architect@ezyy.cloud`
+   - Password: (set in Dashboard)
 3. You should now be logged in as a Senior Consultant with full access
 
 ## Step 8: Create Additional Users
@@ -135,7 +135,7 @@ The application will be available at `http://localhost:5173`
 
 ### "Admin user not found" when running seed migration
 - Ensure you created the admin user in Supabase Auth (Authentication > Users) before running the seed migration
-- The seed migration looks for a user with email `admin@furbank.com` in `auth.users`
+- The seed migration looks for a user with email `cloud.architect@ezyy.cloud` in `auth.users`
 - If the email is different, update the seed script accordingly
 
 ### "Permission denied" errors

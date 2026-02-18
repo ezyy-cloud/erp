@@ -2,7 +2,7 @@
 
 ## System Architecture
 
-The Furbank ERP is built with a clean, layered architecture designed for incremental expansion into a full ERP system.
+The Ezyy ERP is built with a clean, layered architecture designed for incremental expansion into a full ERP system.
 
 ### Frontend Architecture
 

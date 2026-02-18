@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import logo from '@/assets/logo.png';
+import logo from '@/assets/ezyy.svg';
 
 export function Sidebar() {
   const { signOut, permissions } = useAuth();
@@ -80,8 +80,8 @@ export function Sidebar() {
       <div className="flex flex-col h-full w-full">
         {/* Logo/Brand */}
         <div className="flex items-center gap-2 px-6 py-4 border-b">
-          <img src={logo} alt="Furbank ERP" className="h-8 w-8" />
-          <span className="text-lg font-semibold">Furbank ERP</span>
+          <img src={logo} alt="Ezyy ERP" className="h-8 w-8" />
+          <span className="text-lg font-semibold">Ezyy ERP</span>
         </div>
 
         {/* Navigation */}

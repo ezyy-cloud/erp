@@ -21,8 +21,8 @@ This will open your browser to authenticate.
 ## Step 3: Link Your Project
 
 ```bash
-cd furbank-erp-web
-supabase link --project-ref zfvywfujvguzvlmlxfae
+cd web-app
+supabase link --project-ref gqyigihstsxligqmsrwc
 ```
 
 When prompted, enter your database password (found in Supabase Dashboard → Settings → Database).

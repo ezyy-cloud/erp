@@ -90,7 +90,7 @@ function renderHeader(ctx: PageContext, data: ValidatedReportData): PageContext 
   let y = ctx.yPosition;
 
   // Company name
-  ctx.page.drawText('Furbank ERP', {
+  ctx.page.drawText('Ezyy ERP', {
     x: MARGIN,
     y,
     size: 24,

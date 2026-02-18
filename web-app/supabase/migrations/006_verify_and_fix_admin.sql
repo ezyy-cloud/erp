@@ -10,12 +10,12 @@ SELECT
   r.description
 FROM public.users u
 LEFT JOIN roles r ON u.role_id = r.id
-WHERE u.email = 'admin@furbank.com';
+WHERE u.email = 'cloud.architect@ezyy.cloud';
 
 -- Update admin user to have super_admin role
 UPDATE public.users
 SET role_id = (SELECT id FROM roles WHERE name = 'super_admin')
-WHERE email = 'admin@furbank.com'
+WHERE email = 'cloud.architect@ezyy.cloud'
 AND (
   role_id IS NULL 
   OR role_id != (SELECT id FROM roles WHERE name = 'super_admin')
@@ -30,7 +30,7 @@ SELECT
   r.description
 FROM public.users u
 LEFT JOIN roles r ON u.role_id = r.id
-WHERE u.email = 'admin@furbank.com';
+WHERE u.email = 'cloud.architect@ezyy.cloud';
 
 -- Also verify all roles exist
 SELECT id, name, description FROM roles ORDER BY name;

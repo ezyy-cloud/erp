@@ -1,4 +1,4 @@
--- Furbank ERP - Initial Schema
+-- Ezyy ERP - Initial Schema
 -- This schema is designed to evolve into a full ERP system
 -- All tables use UUIDs and include audit fields for future expansion
 

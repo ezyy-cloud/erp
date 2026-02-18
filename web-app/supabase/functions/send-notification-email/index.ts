@@ -1,0 +1,192 @@
+// Supabase Edge Function: Send Notification Email
+// Invoked by Database Webhook on notifications INSERT. Sends one email per notification via Resend.
+
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
+};
+
+type NotificationRecord = {
+  id?: string;
+  recipient_user_id: string;
+  type: string;
+  title: string;
+  message: string;
+  related_entity_type?: string | null;
+  related_entity_id?: string | null;
+};
+
+function buildViewUrl(relatedEntityType: string | null | undefined, relatedEntityId: string | null | undefined, appUrl: string): string {
+  if (!appUrl || !relatedEntityId) return appUrl ? appUrl.replace(/\/$/, '') : '#';
+  const base = appUrl.replace(/\/$/, '');
+  if (relatedEntityType === 'task') return `${base}/tasks/${relatedEntityId}`;
+  if (relatedEntityType === 'project') return `${base}/projects/${relatedEntityId}`;
+  if (relatedEntityType === 'todo') return `${base}/todo-notices`;
+  return base;
+}
+
+function getSubjectAndBody(record: NotificationRecord, appUrl: string): { subject: string; html: string } {
+  const viewUrl = buildViewUrl(record.related_entity_type, record.related_entity_id, appUrl);
+  const viewLink = viewUrl && viewUrl !== '#' ? `<p><a href="${viewUrl}">View in app</a></p>` : '';
+
+  const bodyStyle = 'font-family:sans-serif;line-height:1.5;';
+  const baseBody = (title: string, message: string) =>
+    `<!DOCTYPE html><html><body style="${bodyStyle}"><p><strong>${title}</strong></p><p>${message}</p>${viewLink}</body></html>`;
+
+  switch (record.type) {
+    case 'task_assigned':
+      return { subject: 'You were assigned to a task', html: baseBody(record.title, record.message) };
+    case 'task_due_soon':
+      return { subject: 'Task due soon', html: baseBody(record.title, record.message) };
+    case 'task_overdue':
+      return { subject: 'Task overdue', html: baseBody(record.title, record.message) };
+    case 'review_requested':
+      return { subject: 'Review requested', html: baseBody(record.title, record.message) };
+    case 'review_completed':
+      return { subject: 'Review completed', html: baseBody(record.title, record.message) };
+    case 'comment_added':
+      return { subject: 'New comment on a task', html: baseBody(record.title, record.message) };
+    case 'document_uploaded':
+      return { subject: 'New document on a task', html: baseBody(record.title, record.message) };
+    case 'todo_completed':
+      return { subject: 'To-Do completed', html: baseBody(record.title, record.message) };
+    case 'bulletin_posted':
+      return { subject: 'New bulletin', html: baseBody(record.title, record.message) };
+    case 'project_updated':
+      return { subject: 'Project updated', html: baseBody(record.title, record.message) };
+    case 'project_closed':
+      return { subject: 'Project closed', html: baseBody(record.title, record.message) };
+    case 'project_reopened':
+      return { subject: 'Project reopened', html: baseBody(record.title, record.message) };
+    default:
+      return { subject: record.title, html: baseBody(record.title, record.message) };
+  }
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
+  if (req.method !== 'POST') {
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }),
+      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const authHeader = req.headers.get('Authorization');
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!authHeader || !serviceRoleKey || authHeader.replace('Bearer ', '') !== serviceRoleKey) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  let payload: { record?: NotificationRecord; type?: string; table?: string };
+  try {
+    payload = await req.json();
+  } catch {
+    return new Response(
+      JSON.stringify({ error: 'Invalid JSON body' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const record = payload.record;
+  if (!record?.recipient_user_id || !record?.type || !record?.title || !record?.message) {
+    return new Response(
+      JSON.stringify({ error: 'Missing record or required fields: recipient_user_id, type, title, message' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  if (!supabaseUrl) {
+    console.error('SUPABASE_URL not set');
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  const { data: user, error: userError } = await adminClient
+    .from('users')
+    .select('email, full_name, deleted_at, is_active, email_notifications_enabled')
+    .eq('id', record.recipient_user_id)
+    .maybeSingle();
+
+  if (userError || !user?.email || user.deleted_at != null || user.is_active === false) {
+    // Skip send; return 200 so webhook does not retry
+    return new Response(
+      JSON.stringify({ skipped: true, reason: 'recipient not found or inactive' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (user.email_notifications_enabled === false) {
+    return new Response(
+      JSON.stringify({ skipped: true, reason: 'user disabled email notifications' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const resendApiKey = Deno.env.get('RESEND_API_KEY');
+  if (!resendApiKey) {
+    console.error('RESEND_API_KEY not set');
+    return new Response(
+      JSON.stringify({ skipped: true, reason: 'Resend not configured' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const appUrl = Deno.env.get('APP_URL') ?? '';
+  const fromEmail = Deno.env.get('RESEND_FROM_EMAIL') ?? 'notifications@resend.dev';
+  const { subject, html } = getSubjectAndBody(record, appUrl);
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: [user.email],
+        subject,
+        html,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('Resend send failed:', res.status, errText);
+      return new Response(
+        JSON.stringify({ error: 'Failed to send email', details: errText }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ sent: true, to: user.email }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  } catch (e) {
+    console.error('Resend request error:', e);
+    return new Response(
+      JSON.stringify({ error: String(e) }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});

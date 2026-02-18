@@ -193,6 +193,43 @@ serve(async (req) => {
       }
     }
 
+    // Send welcome email via Resend (non-blocking: log errors but never fail user creation)
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    if (resendApiKey) {
+      const appUrl = Deno.env.get('APP_URL') ?? '';
+      const fromEmail = Deno.env.get('RESEND_FROM_EMAIL') ?? 'onboarding@resend.dev';
+      const loginUrl = appUrl ? `${appUrl.replace(/\/$/, '')}/login` : '#';
+      const dashboardUrl = appUrl ? `${appUrl.replace(/\/$/, '')}/dashboard` : '#';
+      const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;line-height:1.5;">
+        <p>Hi ${fullName ?? email},</p>
+        <p>Welcome! Your account has been created.</p>
+        <p><a href="${loginUrl}">Log in here</a> to get started.</p>
+        <p>You can also go to your <a href="${dashboardUrl}">dashboard</a> after signing in.</p>
+        <p>If you have any questions, contact your administrator.</p>
+      </body></html>`;
+      try {
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: fromEmail,
+            to: [email],
+            subject: 'Welcome to Ezyy ERP',
+            html,
+          }),
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error('Resend welcome email failed:', res.status, errText);
+        }
+      } catch (e) {
+        console.error('Resend welcome email error:', e);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

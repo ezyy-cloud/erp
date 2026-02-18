@@ -148,6 +148,40 @@ supabase secrets list
 
 **Important:** Never commit your service role key to git! It's automatically available in the Edge Function runtime.
 
+### Resend (Email Notifications)
+
+To send onboarding and in-app notification emails via [Resend](https://resend.com):
+
+1. **Resend account**: Sign up at resend.com, verify your sending domain, and create an API key.
+2. **Supabase secrets** (required for notification emails):
+
+   ```bash
+   # Required for create-user welcome email and send-notification-email
+   supabase secrets set RESEND_API_KEY=re_xxxxxxxxxxxx
+
+   # Optional: From address for emails (defaults to Resend's if not set)
+   supabase secrets set RESEND_FROM_EMAIL=notifications@yourdomain.com
+
+   # Optional: App base URL for "View in app" links in notification emails (e.g. https://app.example.com)
+   supabase secrets set APP_URL=https://your-app-url.com
+   ```
+
+3. **Verification**: After deployment, create a user or trigger a notification and check Resend's dashboard for sent emails.
+
+### Database Webhook: Notifications → Email
+
+To send an email for every new in-app notification, configure a **Database Webhook** in the Supabase Dashboard:
+
+1. Go to **Database → Webhooks** and click **Create a new webhook**.
+2. **Name**: e.g. `notifications-to-email`.
+3. **Table**: `public.notifications`.
+4. **Events**: enable **Insert**.
+5. **Type**: **Supabase Edge Functions**.
+6. **Edge Function**: select **send-notification-email** (deploy it first with `supabase functions deploy send-notification-email`).
+7. **HTTP Headers**: Add header `Authorization` with value `Bearer <SUPABASE_SERVICE_ROLE_KEY>` (your project’s service role key from Settings → API). The Edge Function validates this to ensure only the webhook can invoke it.
+
+After saving, every INSERT into `notifications` will trigger a POST to `send-notification-email` with the new row in the payload, and the function will send the corresponding email via Resend.
+
 ## Local Development
 
 ### Start Local Supabase (Optional)
@@ -174,6 +208,9 @@ The Edge Functions automatically have access to:
 - `SUPABASE_URL` - Your project URL
 - `SUPABASE_ANON_KEY` - Your anon key
 - `SUPABASE_SERVICE_ROLE_KEY` - Your service role key (set via secrets)
+- `RESEND_API_KEY` - (Optional) Resend API key for sending notification emails; set via `supabase secrets set RESEND_API_KEY=...`
+- `RESEND_FROM_EMAIL` - (Optional) From address for emails
+- `APP_URL` - (Optional) App base URL for links in emails
 
 ## Security
 

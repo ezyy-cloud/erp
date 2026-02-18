@@ -47,6 +47,7 @@ export interface Database {
           deleted_by: string | null; // User who soft-deleted this user
           theme_preference: string | null; // 'light', 'dark', or 'system'
           avatar_url: string | null; // URL to profile avatar image
+          email_notifications_enabled: boolean | null; // When false, skip notification emails
           created_at: string;
           updated_at: string;
           created_by: string | null;
@@ -61,6 +62,7 @@ export interface Database {
           deleted_by?: string | null;
           theme_preference?: string | null;
           avatar_url?: string | null;
+          email_notifications_enabled?: boolean | null;
           created_at?: string;
           updated_at?: string;
           created_by?: string | null;
@@ -75,6 +77,7 @@ export interface Database {
           deleted_by?: string | null;
           theme_preference?: string | null;
           avatar_url?: string | null;
+          email_notifications_enabled?: boolean | null;
           created_at?: string;
           updated_at?: string;
           created_by?: string | null;
@@ -560,6 +563,14 @@ export interface Database {
           p_task_id: string;
           p_reviewed_by: string;
           p_status: string;
+        };
+        Returns: unknown;
+      };
+      create_project_change_notification: {
+        Args: {
+          p_project_id: string;
+          p_change_type: string;
+          p_changed_by: string | null;
         };
         Returns: unknown;
       };

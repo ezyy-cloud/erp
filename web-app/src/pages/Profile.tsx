@@ -35,6 +35,7 @@ export function Profile() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [localThemePreference, setLocalThemePreference] = useState<'light' | 'dark' | 'system'>('system');
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(true);
 
   // Track original values to detect changes
   const [originalValues, setOriginalValues] = useState({
@@ -42,21 +43,25 @@ export function Profile() {
     email: '',
     avatarUrl: null as string | null,
     themePreference: 'system' as 'light' | 'dark' | 'system',
+    emailNotificationsEnabled: true,
   });
 
   // Load user data
   useEffect(() => {
     if (appUser) {
       const userThemePreference = (appUser as any).theme_preference ?? themePreference ?? 'system';
+      const emailNotif = (appUser as any).email_notifications_enabled ?? true;
       setFullName(appUser.full_name ?? '');
       setEmail(appUser.email ?? '');
       setAvatarUrl(appUser.avatar_url ?? null);
       setLocalThemePreference(userThemePreference);
+      setEmailNotificationsEnabled(emailNotif);
       setOriginalValues({
         fullName: appUser.full_name ?? '',
         email: appUser.email ?? '',
         avatarUrl: appUser.avatar_url ?? null,
         themePreference: userThemePreference,
+        emailNotificationsEnabled: emailNotif,
       });
     }
   }, [appUser, themePreference]);
@@ -105,7 +110,8 @@ export function Profile() {
       email !== originalValues.email ||
       (avatarUrl !== originalValues.avatarUrl && !selectedFile) ||
       selectedFile !== null ||
-      localThemePreference !== originalValues.themePreference
+      localThemePreference !== originalValues.themePreference ||
+      emailNotificationsEnabled !== originalValues.emailNotificationsEnabled
     );
   };
 
@@ -221,6 +227,11 @@ export function Profile() {
         await setThemePreference(localThemePreference);
       }
 
+      // Update email notifications preference if changed
+      if (emailNotificationsEnabled !== originalValues.emailNotificationsEnabled) {
+        updates.email_notifications_enabled = emailNotificationsEnabled;
+      }
+
       // Upload avatar if a new file was selected
       if (selectedFile) {
         await handleAvatarUpload();
@@ -241,6 +252,7 @@ export function Profile() {
         email,
         avatarUrl: selectedFile ? avatarUrl : originalValues.avatarUrl,
         themePreference: localThemePreference,
+        emailNotificationsEnabled,
       });
 
       setSaveSuccess(true);
@@ -275,6 +287,7 @@ export function Profile() {
       setEmail(originalValues.email);
       setAvatarUrl(originalValues.avatarUrl);
       setLocalThemePreference(originalValues.themePreference);
+      setEmailNotificationsEnabled(originalValues.emailNotificationsEnabled);
       setSelectedFile(null);
       setAvatarPreview(null);
       setError(null);
@@ -543,6 +556,22 @@ export function Profile() {
               </Select>
               <p className="text-xs text-muted-foreground">
                 Choose your preferred color theme. System follows your OS preference.
+              </p>
+            </div>
+
+            {/* Email Notifications */}
+            <div className="space-y-2">
+              <Label htmlFor="emailNotifications">Email Notifications</Label>
+              <Select
+                id="emailNotifications"
+                value={emailNotificationsEnabled ? 'on' : 'off'}
+                onChange={(e) => setEmailNotificationsEnabled(e.target.value === 'on')}
+              >
+                <option value="on">On</option>
+                <option value="off">Off</option>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Receive task, project, and other notifications by email. When off, you still see in-app notifications.
               </p>
             </div>
 

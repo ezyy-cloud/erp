@@ -1,6 +1,24 @@
 import { supabase } from '@/lib/supabase/client';
 import type { ProjectStatus } from '@/lib/supabase/types';
 
+/** Notify project members of a project change (in-app + email via webhook). Fire-and-forget. */
+async function notifyProjectChange(
+  projectId: string,
+  changeType: 'project_updated' | 'project_closed' | 'project_reopened'
+): Promise<void> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const changedBy = user?.id ?? null;
+    await supabase.rpc('create_project_change_notification', {
+      p_project_id: projectId,
+      p_change_type: changeType,
+      p_changed_by: changedBy,
+    } as never);
+  } catch {
+    // Non-blocking; do not fail the main operation
+  }
+}
+
 export interface UpdateProjectParams {
   projectId: string;
   name?: string;
@@ -62,6 +80,7 @@ export async function updateProject(params: UpdateProjectParams): Promise<{ erro
         return { error: new Error(result.error ?? 'Failed to close project') };
       }
 
+      await notifyProjectChange(projectId, 'project_closed');
       return { error: null };
     }
 
@@ -101,6 +120,7 @@ export async function updateProject(params: UpdateProjectParams): Promise<{ erro
           }
         }
 
+        await notifyProjectChange(projectId, 'project_reopened');
         return { error: null };
       }
     }
@@ -115,6 +135,7 @@ export async function updateProject(params: UpdateProjectParams): Promise<{ erro
       return { error: error as Error };
     }
 
+    await notifyProjectChange(projectId, 'project_updated');
     return { error: null };
   } catch (error) {
     return { error: error as Error };
@@ -151,6 +172,7 @@ export async function closeProject(projectId: string): Promise<CloseProjectResul
       };
     }
 
+    await notifyProjectChange(projectId, 'project_closed');
     return {
       success: true,
       projectId: result?.project_id ?? projectId,
@@ -196,6 +218,7 @@ export async function reopenProject(projectId: string): Promise<ReopenProjectRes
       };
     }
 
+    await notifyProjectChange(projectId, 'project_reopened');
     return {
       success: true,
       projectId: result?.project_id ?? projectId,

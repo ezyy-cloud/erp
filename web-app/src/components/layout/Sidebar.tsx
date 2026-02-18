@@ -81,7 +81,7 @@ export function Sidebar() {
         {/* Logo/Brand */}
         <div className="flex items-center gap-2 px-6 py-4 border-b">
           <img src={logo} alt="Ezyy ERP" className="h-8 w-8" />
-          <span className="text-lg font-semibold">Ezyy ERP</span>
+          <span className="text-lg font-semibold"> ERP</span>
         </div>
 
         {/* Navigation */}

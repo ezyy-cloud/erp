@@ -5,6 +5,31 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCheck, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+function getLinkLabel(relatedEntityType: string | null | undefined): string | null {
+  switch (relatedEntityType) {
+    case 'task':
+      return 'View task';
+    case 'project':
+      return 'View project';
+    case 'todo':
+      return 'View to-do';
+    case 'bulletin':
+      return 'View bulletin';
+    default:
+      return null;
+  }
+}
+
+function hasNavigateLink(
+  relatedEntityType: string | null | undefined,
+  relatedEntityId: string | null | undefined
+): boolean {
+  if (relatedEntityType === 'task' || relatedEntityType === 'project') {
+    return !!relatedEntityId;
+  }
+  return relatedEntityType === 'todo' || relatedEntityType === 'bulletin';
+}
+
 function formatTimeAgo(date: string): string {
   const now = new Date();
   const then = new Date(date);
@@ -58,7 +83,10 @@ export function NotificationList({ onClose }: NotificationListProps) {
       navigate(`/tasks/${notification.related_entity_id}`);
       onClose?.();
     } else if (notification.related_entity_type === 'project' && notification.related_entity_id) {
-      navigate(`/projects`);
+      navigate(`/projects/${notification.related_entity_id}`);
+      onClose?.();
+    } else if (notification.related_entity_type === 'todo' || notification.related_entity_type === 'bulletin') {
+      navigate('/todo-notices');
       onClose?.();
     }
   };
@@ -128,9 +156,16 @@ export function NotificationList({ onClose }: NotificationListProps) {
                         <p className="text-sm text-muted-foreground line-clamp-2">
                           {notification.message}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {formatTimeAgo(notification.created_at)}
-                        </p>
+                        <div className="flex items-center justify-between gap-2 mt-1">
+                          <p className="text-xs text-muted-foreground">
+                            {formatTimeAgo(notification.created_at)}
+                          </p>
+                          {hasNavigateLink(notification.related_entity_type, notification.related_entity_id) && (
+                            <span className="text-xs text-primary font-medium shrink-0">
+                              {getLinkLabel(notification.related_entity_type)} →
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </button>

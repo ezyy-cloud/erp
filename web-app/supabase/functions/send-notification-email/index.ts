@@ -1,7 +1,6 @@
 // Supabase Edge Function: Send Notification Email
 // Invoked by Database Webhook on notifications INSERT. Sends one email per notification via Resend.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -22,17 +21,28 @@ type NotificationRecord = {
 };
 
 function buildViewUrl(relatedEntityType: string | null | undefined, relatedEntityId: string | null | undefined, appUrl: string): string {
-  if (!appUrl || !relatedEntityId) return appUrl ? appUrl.replace(/\/$/, '') : '#';
+  if (!appUrl) return '#';
   const base = appUrl.replace(/\/$/, '');
-  if (relatedEntityType === 'task') return `${base}/tasks/${relatedEntityId}`;
-  if (relatedEntityType === 'project') return `${base}/projects/${relatedEntityId}`;
-  if (relatedEntityType === 'todo') return `${base}/todo-notices`;
+  if (relatedEntityType === 'task' && relatedEntityId) return `${base}/tasks/${relatedEntityId}`;
+  if (relatedEntityType === 'project' && relatedEntityId) return `${base}/projects/${relatedEntityId}`;
+  if (relatedEntityType === 'todo' || relatedEntityType === 'bulletin') return `${base}/todo-notices`;
   return base;
+}
+
+function getLinkLabel(relatedEntityType: string | null | undefined): string {
+  switch (relatedEntityType) {
+    case 'task': return 'View task';
+    case 'project': return 'View project';
+    case 'todo': return 'View to-do';
+    case 'bulletin': return 'View bulletin';
+    default: return 'View in app';
+  }
 }
 
 function getSubjectAndBody(record: NotificationRecord, appUrl: string): { subject: string; html: string } {
   const viewUrl = buildViewUrl(record.related_entity_type, record.related_entity_id, appUrl);
-  const viewLink = viewUrl && viewUrl !== '#' ? `<p><a href="${viewUrl}">View in app</a></p>` : '';
+  const linkLabel = getLinkLabel(record.related_entity_type);
+  const viewLink = viewUrl && viewUrl !== '#' ? `<p><a href="${viewUrl}">${linkLabel}</a></p>` : '';
 
   const bodyStyle = 'font-family:sans-serif;line-height:1.5;';
   const baseBody = (title: string, message: string) =>
@@ -68,7 +78,7 @@ function getSubjectAndBody(record: NotificationRecord, appUrl: string): { subjec
   }
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
@@ -201,8 +211,12 @@ serve(async (req) => {
     if (!res.ok) {
       const errText = await res.text();
       console.error('send-notification-email: Resend API failed', { status: res.status, body: errText });
+      const hint =
+        res.status === 403 && errText.includes('domain is not verified')
+          ? ' Verify your sending domain at https://resend.com/domains and set RESEND_FROM_EMAIL to an address on that domain.'
+          : '';
       return new Response(
-        JSON.stringify({ error: 'Failed to send email', details: errText }),
+        JSON.stringify({ error: 'Failed to send email', details: errText, hint }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

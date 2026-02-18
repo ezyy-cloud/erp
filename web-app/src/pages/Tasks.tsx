@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, memo, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams, Link } from 'react-router-dom';
 import { usePage } from '@/contexts/PageContext';
-import { Plus, X, Search } from 'lucide-react';
+import { Plus, X, Search, Calendar } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import type { Project, UserWithRole } from '@/lib/supabase/types';
 import { TaskStatus, TaskPriority } from '@/lib/supabase/types';
@@ -139,6 +139,12 @@ const TaskListItem = memo(({ task, searchQuery }: { task: TaskWithRelations; sea
                   </div>
                 );
               })()}
+              {task.created_at && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Calendar className="h-3.5 w-3.5 shrink-0" />
+                  <span>Created {new Date(task.created_at).toLocaleDateString()}</span>
+                </div>
+              )}
             </div>
             <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md w-fit ${priorityDisplay.bgColor} ${priorityDisplay.color}`}>
               <PriorityIcon className="h-3.5 w-3.5" />

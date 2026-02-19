@@ -25,7 +25,7 @@ function buildViewUrl(relatedEntityType: string | null | undefined, relatedEntit
   const base = appUrl.replace(/\/$/, '');
   if (relatedEntityType === 'task' && relatedEntityId) return `${base}/tasks/${relatedEntityId}`;
   if (relatedEntityType === 'project' && relatedEntityId) return `${base}/projects/${relatedEntityId}`;
-  if (relatedEntityType === 'todo' || relatedEntityType === 'bulletin') return `${base}/todo-notices`;
+  if (relatedEntityType === 'todo' || relatedEntityType === 'bulletin') return `${base}/bulletin-board`;
   return base;
 }
 
@@ -39,43 +39,79 @@ function getLinkLabel(relatedEntityType: string | null | undefined): string {
   }
 }
 
-function getSubjectAndBody(record: NotificationRecord, appUrl: string): { subject: string; html: string } {
+function getSubject(type: string): string {
+  switch (type) {
+    case 'task_assigned': return 'You were assigned to a task';
+    case 'task_due_soon': return 'Task due soon';
+    case 'task_overdue': return 'Task overdue';
+    case 'review_requested': return 'Review requested';
+    case 'review_completed': return 'Review completed';
+    case 'comment_added': return 'New comment on a task';
+    case 'document_uploaded': return 'New document on a task';
+    case 'todo_completed': return 'To-Do completed';
+    case 'bulletin_posted': return 'New bulletin';
+    case 'project_updated': return 'Project updated';
+    case 'project_closed': return 'Project closed';
+    case 'project_reopened': return 'Project reopened';
+    default: return 'Notification';
+  }
+}
+
+function buildEmailHtml(record: NotificationRecord, appUrl: string): string {
   const viewUrl = buildViewUrl(record.related_entity_type, record.related_entity_id, appUrl);
   const linkLabel = getLinkLabel(record.related_entity_type);
-  const viewLink = viewUrl && viewUrl !== '#' ? `<p><a href="${viewUrl}">${linkLabel}</a></p>` : '';
+  const hasLink = viewUrl && viewUrl !== '#';
 
-  const bodyStyle = 'font-family:sans-serif;line-height:1.5;';
-  const baseBody = (title: string, message: string) =>
-    `<!DOCTYPE html><html><body style="${bodyStyle}"><p><strong>${title}</strong></p><p>${message}</p>${viewLink}</body></html>`;
+  const buttonHtml = hasLink
+    ? `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0;">
+        <tr>
+          <td style="border-radius:6px;background-color:#18181b;">
+            <a href="${viewUrl}" target="_blank" style="display:inline-block;padding:12px 28px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:6px;">${linkLabel} &rarr;</a>
+          </td>
+        </tr>
+      </table>`
+    : '';
 
-  switch (record.type) {
-    case 'task_assigned':
-      return { subject: 'You were assigned to a task', html: baseBody(record.title, record.message) };
-    case 'task_due_soon':
-      return { subject: 'Task due soon', html: baseBody(record.title, record.message) };
-    case 'task_overdue':
-      return { subject: 'Task overdue', html: baseBody(record.title, record.message) };
-    case 'review_requested':
-      return { subject: 'Review requested', html: baseBody(record.title, record.message) };
-    case 'review_completed':
-      return { subject: 'Review completed', html: baseBody(record.title, record.message) };
-    case 'comment_added':
-      return { subject: 'New comment on a task', html: baseBody(record.title, record.message) };
-    case 'document_uploaded':
-      return { subject: 'New document on a task', html: baseBody(record.title, record.message) };
-    case 'todo_completed':
-      return { subject: 'To-Do completed', html: baseBody(record.title, record.message) };
-    case 'bulletin_posted':
-      return { subject: 'New bulletin', html: baseBody(record.title, record.message) };
-    case 'project_updated':
-      return { subject: 'Project updated', html: baseBody(record.title, record.message) };
-    case 'project_closed':
-      return { subject: 'Project closed', html: baseBody(record.title, record.message) };
-    case 'project_reopened':
-      return { subject: 'Project reopened', html: baseBody(record.title, record.message) };
-    default:
-      return { subject: record.title, html: baseBody(record.title, record.message) };
-  }
+  const dashboardUrl = appUrl ? `${appUrl.replace(/\/$/, '')}/dashboard` : '';
+  const footerLink = dashboardUrl
+    ? `<a href="${dashboardUrl}" style="color:#71717a;text-decoration:underline;">Open Dashboard</a>`
+    : '';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f4f4f5;">
+    <tr>
+      <td style="padding:32px 16px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:520px;margin:0 auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="padding:32px 28px;">
+              <h1 style="margin:0 0 8px 0;font-size:18px;font-weight:700;color:#18181b;">${record.title}</h1>
+              <p style="margin:0 0 4px 0;font-size:14px;line-height:1.6;color:#3f3f46;">${record.message}</p>
+              ${buttonHtml}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 28px;background-color:#fafafa;border-top:1px solid #e4e4e7;">
+              <p style="margin:0;font-size:12px;color:#a1a1aa;">
+                This is an automated notification from Ezyy ERP.${footerLink ? ` ${footerLink}` : ''}
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function getSubjectAndBody(record: NotificationRecord, appUrl: string): { subject: string; html: string } {
+  return {
+    subject: getSubject(record.type),
+    html: buildEmailHtml(record, appUrl),
+  };
 }
 
 Deno.serve(async (req) => {

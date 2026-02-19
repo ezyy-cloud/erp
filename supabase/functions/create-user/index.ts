@@ -126,7 +126,16 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { email, fullName, role, password } = await req.json();
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const { email, fullName, role, password } = body;
 
     if (!email || !fullName || !role || !password) {
       return new Response(

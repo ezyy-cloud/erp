@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   // Helper function to sign out and clear state (used internally)
-  const performSignOut = async () => {
+  const performSignOut = async (forceReload = false) => {
     try {
       await supabase.auth.signOut();
     } catch {
@@ -50,8 +50,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAppUser(null);
     setUser(null);
     setSession(null);
-    // Force a page reload to ensure clean state
-    window.location.href = '/login';
+
+    // Only force reload for security-critical sign-outs (deleted/inactive users)
+    if (forceReload) {
+      window.location.href = '/login';
+    }
+    // Otherwise, ProtectedRoute will handle the redirect via React Router
   };
 
   // Check if user is deleted or inactive and sign them out if so
@@ -60,9 +64,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isInactive = userData?.is_active === false;
 
     if (isDeleted || isInactive) {
-      // User is deleted or inactive - sign them out immediately
-      await performSignOut();
-      return true; // Indicates user was signed out
+      await performSignOut(true);
+      return true;
     }
     return false; // User is valid
   };

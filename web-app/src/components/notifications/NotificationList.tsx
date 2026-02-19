@@ -86,7 +86,7 @@ export function NotificationList({ onClose }: NotificationListProps) {
       navigate(`/projects/${notification.related_entity_id}`);
       onClose?.();
     } else if (notification.related_entity_type === 'todo' || notification.related_entity_type === 'bulletin') {
-      navigate('/todo-notices');
+      navigate('/bulletin-board');
       onClose?.();
     }
   };

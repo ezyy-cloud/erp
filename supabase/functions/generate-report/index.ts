@@ -178,7 +178,15 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const params: ReportParams = await req.json();
+    let params: ReportParams;
+    try {
+      params = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     if (!params.reportType) {
       return new Response(
         JSON.stringify({ error: 'Missing reportType parameter' }),

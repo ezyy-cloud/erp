@@ -137,44 +137,42 @@ export function TaskDetail() {
   const loading = taskLoading || commentsLoading || notesLoading || filesLoading;
 
   // Fetch project, assigned user, and review users when task changes
-  // Use parallel queries and join queries for better performance
   useEffect(() => {
     if (!task || !id) return;
+    let cancelled = false;
 
     const taskData = task as any;
     
-    // Extract project from task (already included in join)
     if (taskData.projects) {
       setProject(taskData.projects);
     } else if (taskData.project_id) {
-      // Fallback: fetch project separately
       supabase
         .from('projects')
         .select('*')
         .eq('id', taskData.project_id)
         .single()
-        .then(({ data: projectData }) => {
+        .then(({ data: projectData, error }) => {
+          if (cancelled) return;
+          if (error) {
+            console.error('Error fetching project:', error);
+          }
           setProject(projectData ?? null);
         });
     } else {
       setProject(null);
     }
 
-    // Note: Assigned users are now fetched separately via getTaskAssignees
-    // This is handled in the useEffect hook below
-
-    // Fetch review requester and reviewer in a single batch query
     const userIds: string[] = [];
     if (task.review_requested_by) userIds.push(task.review_requested_by);
     if (task.reviewed_by) userIds.push(task.reviewed_by);
 
     if (userIds.length > 0) {
-      // Batch fetch all users with roles in a single query
       supabase
         .from('users')
         .select('*, roles:roles!users_role_id_fkey(*)')
         .in('id', userIds)
         .then(({ data: usersData, error }) => {
+          if (cancelled) return;
           if (error) {
             console.error('Error fetching review users:', error);
             setReviewRequestedBy(null);
@@ -206,6 +204,8 @@ export function TaskDetail() {
       setReviewRequestedBy(null);
       setReviewedBy(null);
     }
+
+    return () => { cancelled = true; };
   }, [task, id]);
 
   // Create stable reference for assignee IDs to avoid dependency array size changes
@@ -216,10 +216,10 @@ export function TaskDetail() {
   // Fetch task users when task, comments, notes, files, or assignees change
   useEffect(() => {
     if (!task || !id) return;
+    let cancelled = false;
     
     const userIds = new Set<string>();
     
-    // Add assignees from taskAssignees (multi-assignee model)
     taskAssignees.forEach(assignee => userIds.add(assignee.id));
     
     comments.forEach((comment) => {
@@ -242,12 +242,12 @@ export function TaskDetail() {
 
     if (userIds.size > 0) {
       const userIdsArray = Array.from(userIds);
-      // Batch fetch users with roles in a single query using join
       supabase
         .from('users')
         .select('*, roles:roles!users_role_id_fkey(*)')
         .in('id', userIdsArray)
         .then(({ data: usersData, error }) => {
+          if (cancelled) return;
           if (error) {
             console.error('Error fetching task users:', error);
             setTaskUsers([]);
@@ -255,7 +255,6 @@ export function TaskDetail() {
           }
 
           if (usersData && usersData.length > 0) {
-            // Transform users with roles
             const usersWithRoles = usersData.map((userData: any) => ({
               ...userData,
               roles: Array.isArray(userData.roles) && userData.roles.length > 0 
@@ -270,6 +269,8 @@ export function TaskDetail() {
     } else {
       setTaskUsers([]);
     }
+
+    return () => { cancelled = true; };
   }, [task, comments, notes, files, id, assigneeIdsString]);
 
   // Fetch task assignees and subscribe to real-time updates

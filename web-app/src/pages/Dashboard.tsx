@@ -72,10 +72,7 @@ export function Dashboard() {
 
   // Initial fetch
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
+    if (!user) return;
 
     async function fetchStats() {
       try {

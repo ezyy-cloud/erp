@@ -66,9 +66,12 @@ export function TodoNotices() {
       .is('deleted_at', null)
       .eq('is_active', true)
       .then(({ data, error }) => {
-        if (isMounted && !error && data) {
-          setUsers(data as User[]);
+        if (!isMounted) return;
+        if (error) {
+          console.error('Error fetching users:', error);
+          return;
         }
+        setUsers((data as User[]) ?? []);
       });
     return () => {
       isMounted = false;

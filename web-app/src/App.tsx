@@ -33,25 +33,32 @@ const PageLoadingFallback = memo(() => (
 ));
 PageLoadingFallback.displayName = 'PageLoadingFallback';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" aria-live="polite" aria-busy="true">
-        <div className="text-center space-y-4">
-          <div className="skeleton-shimmer rounded-full h-12 w-12 mx-auto" aria-hidden="true" />
-          <p className="text-muted-foreground text-sm">Loading...</p>
+function RouteErrorFallback() {
+  return (
+    <div className="min-h-[50vh] flex items-center justify-center p-4">
+      <div className="text-center space-y-4">
+        <p className="text-destructive font-medium">Something went wrong loading this page.</p>
+        <div className="flex gap-2 justify-center">
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm hover:bg-primary/90"
+          >
+            Refresh Page
+          </button>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
 
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  return <>{children}</>;
+  return <ErrorBoundary fallback={<RouteErrorFallback />}>{children}</ErrorBoundary>;
 }
 
 function AppRoutes() {

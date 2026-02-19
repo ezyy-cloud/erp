@@ -34,14 +34,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return 'system';
   });
   const [theme, setTheme] = useState<Theme>(() => getEffectiveTheme(themePreference));
-  const [isLoading, setIsLoading] = useState(true);
 
   // Load theme preference from database when user is authenticated
   useEffect(() => {
-    if (!user || !appUser) {
-      setIsLoading(false);
-      return;
-    }
+    if (!user || !appUser) return;
 
     const loadThemePreference = async () => {
       try {
@@ -58,8 +54,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error('Error loading theme preference:', error);
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -123,12 +117,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const newPreference = theme === 'light' ? 'dark' : 'light';
     setThemePreference(newPreference);
   }, [theme, setThemePreference]);
-
-  // Don't render children until theme is loaded for authenticated users (prevents flicker)
-  // For unauthenticated users, render immediately with localStorage/default theme
-  if (isLoading && user) {
-    return null;
-  }
 
   return (
     <ThemeContext.Provider value={{ theme, themePreference, setThemePreference, toggleTheme }}>

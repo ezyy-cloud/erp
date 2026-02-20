@@ -47,6 +47,7 @@ function getSubject(type: string): string {
     case 'review_requested': return 'Review requested';
     case 'review_completed': return 'Review completed';
     case 'comment_added': return 'New comment on a task';
+    case 'note_added': return 'New note on a task';
     case 'document_uploaded': return 'New document on a task';
     case 'todo_completed': return 'To-Do completed';
     case 'bulletin_posted': return 'New bulletin';
